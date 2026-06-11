@@ -8,8 +8,8 @@ async function initializeAndStartBoss() {
   if (!bossReadyPromise) {
     // Only perform the initialization and start sequence once
     bossReadyPromise = (async () => {
-      const databaseUrl = `${process.env.DB_PROTOCOL}://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`;
-      
+     // const databaseUrl = `${process.env.DB_PROTOCOL}://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`;
+     const databaseUrl =`${process.env.DATABASE_URL}`      
       bossInstance = new PgBoss({
         connectionString: databaseUrl,
         retryLimit: 5,
