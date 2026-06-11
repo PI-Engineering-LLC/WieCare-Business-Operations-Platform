@@ -1,0 +1,24 @@
+exports.up = (knex) => knex.schema.createTable('maintenance_requests', (t) => {
+    t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+    t.string('request_number');
+    t.uuid('client_id').notNullable().references('id').inTable('clients').onDelete('CASCADE');;
+    t.string('client_name');
+    t.string('maintenance_type').defaultTo('service_call');
+    t.string('priority').defaultTo('medium');
+    t.string('title').notNullable();
+    t.text('description');
+    t.string('equipment_info');
+    t.date('preferred_date_1');
+    t.date('preferred_date_2');
+    t.date('scheduled_date');
+    t.string('status').defaultTo('pending');
+    t.text('notes');
+    t.text('admin_notes');
+    t.text('completion_notes');
+    t.string('inspection_report_key');
+    t.jsonb('attachments').defaultTo('[]');
+    t.uuid('created_by').references('id').inTable('users').onDelete('CASCADE');;
+    t.timestamp('created_at').defaultTo(knex.fn.now());
+    t.timestamp('updated_at').defaultTo(knex.fn.now());
+  });
+  exports.down = (knex) => knex.schema.dropTable('maintenance_requests');

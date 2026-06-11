@@ -1,0 +1,65 @@
+exports.up = async (knex) => {
+    await knex.schema.createTable('training_sessions', (t) => {
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      t.string('title').notNullable();
+      t.text('description');
+      t.string('coaster_name');
+      t.string('category').defaultTo('operations');
+      t.string('instructor');
+      t.string('location');
+      t.boolean('is_online').defaultTo(false);
+      t.string('meeting_link');
+      t.date('session_date').notNullable();
+      t.string('start_time');
+      t.string('end_time');
+      t.decimal('duration_hours', 4, 2);
+      t.integer('max_participants');
+      t.integer('current_registrations').defaultTo(0);
+      t.boolean('is_mandatory').defaultTo(false);
+      t.string('status').defaultTo('upcoming');
+      t.string('materials_storage_key');
+      t.string('image_storage_key');
+      t.timestamp('created_at').defaultTo(knex.fn.now());
+      t.timestamp('updated_at').defaultTo(knex.fn.now());
+    });
+    await knex.schema.createTable('training_registrations', (t) => {
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      t.uuid('training_id').notNullable().references('id').inTable('training_sessions').onDelete('CASCADE');;
+      t.string('training_title');
+      t.uuid('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');;
+      t.string('user_name');
+      t.string('user_email');
+      t.uuid('client_id').references('id').inTable('clients').onDelete('CASCADE');;
+      t.string('client_name');
+      t.string('status').defaultTo('registered');
+      t.date('registration_date');
+      t.date('completion_date');
+      t.string('certificate_storage_key');
+      t.text('notes');
+      t.timestamp('created_at').defaultTo(knex.fn.now());
+      t.timestamp('updated_at').defaultTo(knex.fn.now());
+    });
+    await knex.schema.createTable('training_requests', (t) => {
+      t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      t.uuid('client_id').notNullable().references('id').inTable('clients').onDelete('CASCADE');;
+      t.string('client_name');
+      t.uuid('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');;
+      t.string('user_name');
+      t.string('user_email');
+      t.string('training_type');
+      t.text('description');
+      t.date('preferred_date_1');
+      t.date('preferred_date_2');
+      t.integer('number_of_participants').defaultTo(1);
+      t.string('status').defaultTo('pending');
+      t.uuid('scheduled_training_id').references('id').inTable('training_sessions').onDelete('CASCADE');;
+      t.text('admin_notes');
+      t.timestamp('created_at').defaultTo(knex.fn.now());
+      t.timestamp('updated_at').defaultTo(knex.fn.now());
+    });
+  };
+  exports.down = async (knex) => {
+    await knex.schema.dropTable('training_requests');
+    await knex.schema.dropTable('training_registrations');
+    await knex.schema.dropTable('training_sessions');
+  };

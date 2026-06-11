@@ -1,0 +1,37 @@
+exports.up = (knex) => knex.schema.createTable('invoices', (t) => {
+    t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+    t.uuid('department_id').references('id').inTable('departments').onDelete('CASCADE');
+    t.enu('sending_entity', ['Wiegand Sports Gmbh', 'Wiegand Services LLC']).notNullable();
+    t.string('invoice_number');
+    t.uuid('client_id').notNullable().references('id').inTable('clients').onDelete('CASCADE');;
+    t.string('client_name');
+    t.string('coaster_name');
+    t.uuid('order_id') //can be order/sub-order
+    t.string('title').notNullable();
+    t.string('po_number');
+    t.jsonb('items').defaultTo('[]');
+    t.decimal('subtotal', 12, 2).defaultTo(0);
+    t.decimal('credit', 12, 2).defaultTo(0);
+    t.decimal('sales_tax', 12, 2).defaultTo(0);
+    t.decimal('packing', 12, 2).defaultTo(0);
+    t.decimal('export_declaration', 12, 2).defaultTo(0);
+    t.decimal('customs_fees', 12, 2).defaultTo(0);
+    t.decimal('freight', 12, 2).defaultTo(0);
+    t.decimal('total_amount', 12, 2).notNullable();
+    t.decimal('amount_paid', 12, 2).defaultTo(0);
+    t.decimal('balance_due', 12, 2);
+    t.boolean('_showCredit').defaultTo(false);
+    t.string('currency').defaultTo('USD');
+    t.string('status').defaultTo('draft');
+    t.date('issue_date');
+    t.date('due_date');
+    t.date('last_reminder_date');
+    t.integer('reminder_count').defaultTo(1);
+    t.jsonb('payment_history').defaultTo('[]');
+    t.text('notes');
+    t.string('pdf_storage_key');
+    t.uuid('created_by').references('id').inTable('users').onDelete('CASCADE');;
+    t.timestamp('created_at').defaultTo(knex.fn.now());
+    t.timestamp('updated_at').defaultTo(knex.fn.now());
+  });
+  exports.down = (knex) => knex.schema.dropTable('invoices');

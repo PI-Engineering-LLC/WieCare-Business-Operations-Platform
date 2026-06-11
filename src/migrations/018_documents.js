@@ -1,0 +1,20 @@
+exports.up = (knex) => knex.schema.createTable('documents', (t) => {
+    t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+    t.string('title').notNullable();
+    t.text('description');
+    t.string('category').defaultTo('manual');
+    t.string('coaster_name').notNullable();
+    t.string('file_storage_key').notNullable();
+    t.string('file_type');
+    t.bigInteger('file_size');
+    t.string('equipment_model');
+    t.uuid('client_id').references('id').inTable('clients').onDelete('CASCADE');;
+    t.uuid('invoice_id').references('id').inTable('invoices').onDelete('CASCADE');;
+    t.boolean('is_public').defaultTo(true);
+    t.jsonb('tags').defaultTo('[]');
+    t.string('status').defaultTo('active');
+    t.uuid('created_by').references('id').inTable('users').onDelete('CASCADE');
+    t.timestamp('created_at').defaultTo(knex.fn.now());
+    t.timestamp('updated_at').defaultTo(knex.fn.now());
+  });
+  exports.down = (knex) => knex.schema.dropTable('documents');
