@@ -8,6 +8,11 @@ const transporter = nodemailer.createTransport({
       user: process.env.SMTP_USER, 
       pass: process.env.SMTP_PASS, 
     },
+  tls: {
+    // This prevents Render from blocking the connection due to certificate mismatch
+    ciphers: 'SSLv3',
+    rejectUnauthorized: false 
+  }
   });
   const sendEmail = async ({ to, subject, body }) =>{
     try {
