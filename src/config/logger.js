@@ -18,13 +18,13 @@ const logger = winston.createLogger({
 
 // Production Cloud Shipping
 if (process.env.NODE_ENV === 'production') {
-  logger.add(new winston.transports.Loggly({
-    token: process.env.LOGGLY_TOKEN, // Your secure API token
-    subdomain: process.env.LOGGLY_SUBDOMAIN, // Your Loggly account name
-    tags: ['express-app', 'production'],
-    json: true
-  }));
-} else {
+//   logger.add(new winston.transports.Loggly({
+//     token: process.env.LOGGLY_TOKEN, // Your secure API token
+//     subdomain: process.env.LOGGLY_SUBDOMAIN, // Your Loggly account name
+//     tags: ['express-app', 'production'],
+//     json: true
+//   }));
+// } else {
   // Local Development: Keep it simple and colorized in the terminal
   logger.add(new winston.transports.Console({
     format: winston.format.combine(

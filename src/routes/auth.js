@@ -108,7 +108,7 @@ router.post('/verify-mfa', asyncHandler( async (req, res)=> {
     res.cookie("access_token", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: "strict",
+      sameSite: "none",
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
     res.json({ message: 'MFA enabled successfully. Save backup codes!', backup_codes: backupCodes });
@@ -146,7 +146,7 @@ router.post('/login', validate(loginSchema),  asyncHandler(async (req, res) => {
     res.cookie("access_token", partialToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: "strict",
+      sameSite: "none",
       maxAge: 5 * 60 * 1000, // 5 minutes
     });
     return res.json({ mfa_required: true });
@@ -160,14 +160,14 @@ router.post('/login', validate(loginSchema),  asyncHandler(async (req, res) => {
    res.cookie("refresh_token", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: "strict",
+    sameSite: "none",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
   res.cookie("access_token", accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: "strict",
+    sameSite: "none",
     maxAge: 15 * 60 * 1000, // 15 minutes
   });
   res.json({ success: true});
@@ -195,13 +195,13 @@ router.post('/refresh', asyncHandler( async (req, res) => {
   res.cookie('refresh_token', newRefreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'none',
       maxAge: 7 * 24 * 60 * 60 * 1000,
   });
   res.cookie("access_token", newAccessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: "strict",
+    sameSite: "none",
     maxAge: 15 * 60 * 1000, // 15 minutes
   });
     res.json({ success: true })
@@ -355,12 +355,12 @@ router.post('/logout',requireAuth,loadContext,resolveClientContext, asyncHandler
     res.clearCookie('refresh_token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'none',
     });
     res.clearCookie('access_token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'none',
     });
     res.json({ message: 'Logged out' });
   }));
@@ -370,12 +370,12 @@ router.post('/logout-all', requireAuth, asyncHandler( async (req, res) => {
   res.clearCookie('refresh_token', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: 'none',
   });
   res.clearCookie('access_token', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: 'none',
   });
   res.json({ message: 'Logged out from all devices' });
 }));
@@ -452,7 +452,7 @@ router.get('/google/callback',
             res.cookie("access_token", partialToken, {
               httpOnly: true,
               secure: process.env.NODE_ENV === 'production',
-              sameSite: "strict",
+              sameSite: "none",
               maxAge: 5 * 60 * 1000, // 5 minutes
             });
             return res.redirect(
@@ -475,7 +475,7 @@ router.get('/google/callback',
         res.cookie("access_token", token, {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
-          sameSite: "strict",
+          sameSite: "none",
           maxAge: 15 * 60 * 1000, // 15 minutes
         });
         // res.redirect(`${process.env.FRONTEND_URL}/auth-callback?token=${token}`);
