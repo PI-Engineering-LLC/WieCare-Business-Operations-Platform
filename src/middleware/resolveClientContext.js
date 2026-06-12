@@ -1,6 +1,5 @@
 module.exports = (req, res, next) => {
   const clientId = req.header('X-Tenant-Id') || req.body?.clientId || req.body?.client_id;
-  // console.log(req.header('X-Tenant-Id'), req.headers['x-tenant-id'], req.header('x-tenant-id'), req.get('x-tenant-id'))
   // PLATFORM ADMIN bypass
   if (req.user && req.user.isInternalAdmin) { // Use the flags from loadContext
     req.clientId = clientId; // Admins can set context explicitly

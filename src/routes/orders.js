@@ -27,21 +27,6 @@ router.get('/', requireAuth, loadContext, resolveClientContext,
     res.json(result);
   }));
 
-// router.get('/:id', requireAuth, async (req, res) => {
-//     console.log("***ORDERS")
-//   const order = await db('orders').where({ id: req.params.id }).first();
-//   if (!order) return res.status(404).json({ error: 'Not found' });
-//   res.json(order);
-// });
-
-// router.post('/', requireAuth, adminOnly, async (req, res) => {
-//   const [order] = await db('orders').insert({
-//     ...req.body,
-//     created_by: req.user.id,
-//     order_number: `ORD-${Date.now().toString().slice(-6)}`
-//   }).returning('*');
-//   res.status(201).json(order);
-// });
 router.post('/', requireAuth, loadContext, resolveClientContext,
   auditMiddleware({ action: 'order.created', resourceType: 'order' }),
   asyncHandler(async (req, res) => {

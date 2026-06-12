@@ -1,15 +1,11 @@
-require('dotenv').config(); 
+require('dotenv').config();
 const db = require('../db');
-const inviteService = require('../services/invite'); 
+const inviteService = require('../services/invite');
 const { startWorkers, stopWorkers } = require('../workers/startWorkers')
 const seedAdmin = async () => {
     try {
-      await db.raw('SELECT 1');
+        await db.raw('SELECT 1');
         console.log('✓ Database connection verified for seeding.');
-
-        // --- START PG-BOSS WORKERS ---
-        // await startWorkers(); // <--- START PG-BOSS AFTER DB IS READY
-        // console.log('✓ pg-boss workers started for seeding operations.');
 
         const adminEmailsStr = process.env.ADMIN_EMAILS; // Expecting a comma-separated list
 
@@ -54,13 +50,23 @@ const seedAdmin = async () => {
             } else {
                 // No user with this email exists. Create an invite for them.
                 console.log(`  No user found with ${email}. Creating super admin invite.`);
-                await inviteService.createInvite({
-                    email,
-                    platformRole: 'super_admin',
-                    inviteType: 'platform'
-                });
-                console.log(`  Super admin invite sent to ${email}. They need to accept the invite to complete setup.`);
-                atLeastOneActionTaken = true;
+                let existingInvite = await db("invites")
+                    .where({ email })
+                    .whereNull('accepted_at')
+                    .where('invite_expires_at', '>', db.fn.now())
+                    .first();
+                    //No invite exists for this email
+                if (!existingInvite) {
+                    await inviteService.createInvite({
+                        email,
+                        platformRole: 'super_admin',
+                        inviteType: 'platform'
+                    });
+                    console.log(`  Super admin invite sent to ${email}. They need to accept the invite to complete setup.`);
+                    atLeastOneActionTaken = true;
+
+                }
+
             }
         }
 
@@ -75,17 +81,14 @@ const seedAdmin = async () => {
         console.error("Error during admin seeding:", err);
         process.exitCode = 1
         // process.exit(1);
-    }finally {
-      // --- STOP PG-BOSS WORKERS ---
-      // await stopWorkers(); // <--- STOP PG-BOSS HERE
-      // console.log('pg-boss workers stopped after seeding.');
+    } finally {
 
-      // --- DESTROY KNEX DB CONNECTION ---
-      // This ensures all database connections are properly closed and resources released.
-      await db.destroy();
-      console.log('Database connection pool destroyed after seeding.');
-      process.exit(0); // Exit successfully if no error occurred (or after handling error)
-  }
+        // --- DESTROY KNEX DB CONNECTION ---
+        // This ensures all database connections are properly closed and resources released.
+        await db.destroy();
+        console.log('Database connection pool destroyed after seeding.');
+        process.exit(0); // Exit successfully if no error occurred (or after handling error)
+    }
 };
 
 seedAdmin();

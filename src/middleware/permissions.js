@@ -5,7 +5,6 @@ module.exports =
     res,
     next
   ) => {
-    console.log({...requiredPermissions})
     // Super admin bypass - relies on isInternalAdmin flag from loadContext
     if (req.user && req.user.isInternalAdmin) {
       return next();

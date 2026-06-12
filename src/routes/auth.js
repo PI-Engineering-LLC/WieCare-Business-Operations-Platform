@@ -74,7 +74,6 @@ await db('users').where({ id: user.id }).update({  mfa_enabled: false, mfa_secre
 router.post('/verify-mfa', asyncHandler( async (req, res)=> {
   const token = req.cookies?.access_token
   const {  code } = req.body;
-    // const { token, code } = req.body;
     let payload;
     try {
         payload = jwt.verify(token, process.env.JWT_SECRET);
@@ -100,6 +99,7 @@ router.post('/verify-mfa', asyncHandler( async (req, res)=> {
     crypto.randomBytes(4).toString('hex')
   );
   const hashedCodes = backupCodes.map(c => bcrypt.hashSync(c, 10));
+  const firstEnable = user.mfa_enabled;
 
     if (!user.mfa_enabled) {
         await db('users').where({ id: user.id }).update({ mfa_enabled: true, mfa_backup_codes: JSON.stringify(hashedCodes) });
@@ -111,10 +111,13 @@ router.post('/verify-mfa', asyncHandler( async (req, res)=> {
       sameSite: "none",
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
-    res.json({ message: 'MFA enabled successfully. Save backup codes!', backup_codes: backupCodes });
+    if(firstEnable){
+      res.json({ message: 'MFA enabled successfully. Save backup codes!', backup_codes: backupCodes, mfa_enabled: firstEnable });
+    }else{
+      res.json({ message: 'MFA enabled successfully.', mfa_enabled: firstEnable });
 
+    }
 
-    // res.json({ token: accessToken, message: 'MFA enabled successfully. Save backup codes!', backup_codes: backupCodes });
 }));
 
 router.post('/login', validate(loginSchema),  asyncHandler(async (req, res) => {
@@ -149,9 +152,7 @@ router.post('/login', validate(loginSchema),  asyncHandler(async (req, res) => {
       sameSite: "none",
       maxAge: 5 * 60 * 1000, // 5 minutes
     });
-    return res.json({ mfa_required: true });
-    // return res.json({ mfa_required: true, token: partialToken, user: sanitizeUser(user) });
-  
+    return res.json({ mfa_required: true });  
   }
 
   const accessToken = issueAccessToken(user);
@@ -171,7 +172,6 @@ router.post('/login', validate(loginSchema),  asyncHandler(async (req, res) => {
     maxAge: 15 * 60 * 1000, // 15 minutes
   });
   res.json({ success: true});
-  // res.json({ token: accessToken});
 }));
 
 router.post('/refresh', asyncHandler( async (req, res) => {
@@ -205,7 +205,6 @@ router.post('/refresh', asyncHandler( async (req, res) => {
     maxAge: 15 * 60 * 1000, // 15 minutes
   });
     res.json({ success: true })
-  // res.json({ token: newAccessToken });
 }));
 
 
@@ -458,9 +457,7 @@ router.get('/google/callback',
             return res.redirect(
               `${process.env.FRONTEND_URL}/mfa-verify`
           );
-            // return res.redirect(
-            //     `${process.env.FRONTEND_URL}/mfa-verify?token=${partialToken}`
-            // );
+            
         }
 
         const token = issueAccessToken(user, process.env.JWT_EXPIRES_IN);
@@ -478,7 +475,6 @@ router.get('/google/callback',
           sameSite: "none",
           maxAge: 15 * 60 * 1000, // 15 minutes
         });
-        // res.redirect(`${process.env.FRONTEND_URL}/auth-callback?token=${token}`);
         res.redirect(`${process.env.FRONTEND_URL}/auth-callback`);
     },
     (err, req, res, next) => {

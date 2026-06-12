@@ -9,7 +9,7 @@ const clientScope = require('../middleware/clientScope');
 const asyncHandler = require('../middleware/asyncHandler');
 const auditMiddleware = require('../middleware/auditMiddleware');
 const axios = require('axios')
-const notificationService = require('../services/notifications.service'); // Using the service class
+const notificationService = require('../services/notifications.service'); 
 const {getIO} = require('../config/socket')
 
 router.post('/webhook/ipospays',

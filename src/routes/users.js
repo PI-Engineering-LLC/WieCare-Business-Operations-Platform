@@ -158,17 +158,17 @@ router.get('/:id', requireAuth, loadContext, requireRoles(['super_admin', 'platf
       .where('tm.user_id', userId)
       .where('tm.is_active', true)
       .select(
-        'tm.id as membership_id', // CHANGED: Standardized to membership_id
+        'tm.id as membership_id', 
         't.id as client_id',
         't.company_name as client_name',
-        'tm.created_at as joined_at' // CHANGED: Ensures joined_at is present
+        'tm.created_at as joined_at' 
       );
   
     for (const membership of memberships) {
       const roles = await db('membership_roles as mr')
         .join('roles as r', 'r.id', 'mr.role_id')
         .where('mr.membership_id', membership.membership_id)
-        .select('r.id', 'r.name', 'r.client_id'); // CHANGED: Added r.client_id
+        .select('r.id', 'r.name', 'r.client_id'); 
       membership.roles = roles;
     }
   

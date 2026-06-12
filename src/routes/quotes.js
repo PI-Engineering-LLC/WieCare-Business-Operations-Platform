@@ -28,16 +28,9 @@ router.get('/', requireAuth, loadContext, resolveClientContext,
     res.json(result);
   }));
 
-// router.get('/:id', requireAuth, async (req, res) => {
-//   const quote = await db('quotes').where({ id: req.params.id }).first();
-//   if (!quote) return res.status(404).json({ error: 'Not found' });
-//   res.json(quote);
-// });
-
 router.post('/', requireAuth, loadContext, resolveClientContext,
   auditMiddleware({ action: 'quote.created', resourceType: 'quote' }),
   asyncHandler(async (req, res) => {
-    console.log(req.body)
     const quoteClientId= req.body.client_id;
     const client = await db('clients').where({ id: quoteClientId}).first();
 
@@ -70,10 +63,8 @@ router.post('/', requireAuth, loadContext, resolveClientContext,
       });
 
     }
-    // const client = await db('clients').where({ id: quote.client_id }).first();
     // Notify client when admin sends a quote
     const isUpdate = false;
-    // const isUpdate = req.user.isInternalAdmin && !!quote.sending_entity && quote.status != 'draft';
     if (req.user.isInternalAdmin && (quote.status === 'sent') && quote.client_id) {
       await notificationService.notifyClientUsers({
         clientId: quote.client_id,
@@ -200,32 +191,5 @@ router.delete('/:id', requireAuth, adminOnly,
     await db('quotes').where({ id }).delete();
     res.json({ success: true });
   }));
-
-//   router.patch('/:id', requireAuth, async (req, res) => {
-//     const { id } = req.params;
-//     const existing = await db('quotes').where({ id }).first();
-//     if (!existing) return res.status(404).json({ error: 'Not found' });
-
-//     // If the request only updates status (no items sent), preserve existing items
-//     const updates = { ...req.body };
-//     if (!updates.items) {
-//       delete updates.items; // don't overwrite items with undefined
-//     }
-
-//     await db('quotes').where({ id }).update({ ...updates, updated_at: new Date() });
-//     const updated = await db('quotes').where({ id }).first();
-
-//     // Notify client when admin sends a quote
-//     if (updates.status === 'sent' && updated.client_id) {
-//       await notifyClientUsers(updated.client_id, 'quote_sent', { quote_id: id, title: updated.title });
-//     }
-
-//     // Notify admins when client requests modifications (status reverted to pending)
-//     if (updates.status === 'pending' && existing.status === 'sent') {
-//       await notifyAdmins('quote_modification_requested', { quote_id: id, client_name: updated.client_name });
-//     }
-
-//     res.json(updated);
-//   });
 
 module.exports = router;

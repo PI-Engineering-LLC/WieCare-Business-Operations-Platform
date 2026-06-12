@@ -4,7 +4,7 @@ const db = require('../db');
 const emailService = require('./email.service');
 
 class InviteService {
-    async createInvite({ email, inviteType, clientId, role_ids, platformRole, authProvider = 'any', invitedBy }) { // Corrected: role_ids instead of roleId
+    async createInvite({ email, inviteType, clientId, role_ids, platformRole, authProvider = 'any', invitedBy }) { 
         return await db.transaction(async trx => {
             const normalizedEmail = email.trim().toLowerCase();
             const existingUser = await trx('users')
@@ -20,7 +20,7 @@ class InviteService {
             const selector = crypto.randomBytes(8).toString('hex');
             const verifier = crypto.randomBytes(32).toString('hex');
             const invite_token = `${selector}.${verifier}`;
-            const tokenHash = await bcrypt.hash(verifier, 12); // Await bcrypt.hash
+            const tokenHash = await bcrypt.hash(verifier, 12); 
 
             const invite_expires_at = new Date(Date.now() + 72 * 60 * 60 * 1000);
 
@@ -40,11 +40,7 @@ class InviteService {
                 .returning('*');
 
             const inviteUrl = `${process.env.FRONTEND_URL}/accept-invite/${invite_token}`;
-            console.log("invite url", inviteUrl)
             await emailService.queue({ to: normalizedEmail, type: 'invite', payload: { inviteUrl, inviteType } });
-            // await emailService.send({ type: 'invite', to: normalizedEmail, data: {inviteUrl, inviteType, message} });
-
-            // console.log(inviteUrl)
             return { id: invite.id, email: normalizedEmail, inviteUrl, invite_expires_at };
         }
         );
@@ -58,7 +54,7 @@ class InviteService {
 
         const invite = await db('invites')
             .where({ token_selector: selector })
-            .first(); // Fetch the invite directly, its role_ids is JSONB
+            .first(); 
 
         if (!invite) { throw new Error('Invite not found'); }
         if (invite.accepted_at) { throw new Error('Invite already accepted'); }
@@ -66,10 +62,10 @@ class InviteService {
         if (new Date(invite.invite_expires_at) < new Date()) {
             throw new Error('Invite expired');
         }
-        const valid = await bcrypt.compare(verifier, invite.invite_token) // Corrected from matchedInvite
+        const valid = await bcrypt.compare(verifier, invite.invite_token) 
         if (!valid) { throw new Error('Invalid invite token'); }
 
-        // Now, if you need role names or client names, you'd fetch them based on invite.role_ids and invite.client_id
+        // If we need role names or client names,  fetch them based on invite.role_ids and invite.client_id
         // This is optional for validation, but needed if the frontend needs to display this info.
         let fullInvite = { ...invite };
         if (invite.client_id) {
@@ -80,21 +76,21 @@ class InviteService {
             const roles = await db('roles').whereIn('id', invite.role_ids).select('id', 'name');
             fullInvite.role_names = roles.map(r => r.name);
         }
-        return fullInvite; // Return the full invite object
+        return fullInvite; 
     }
 
     async acceptInvite({ token, password, googleProfile, name }) {
         return await db.transaction(async trx => {
-            const invite = await this.validateInviteToken(token); // This now returns the full invite with role_ids
+            const invite = await this.validateInviteToken(token); 
             let user;
 
             const existingUser = await trx('users').where({ email: invite.email, deleted_at: null }).first();
 
             if (existingUser) {
-                user = existingUser; // Use existing user
+                user = existingUser; 
                 await trx('users').where({ id: user.id }).update({
                     google_id: googleProfile?.id || null,
-                    platform_role: invite.platform_role, // Update platform_role from invite
+                    platform_role: invite.platform_role, 
                 });
             } else {
                 // Create new user
@@ -110,7 +106,7 @@ class InviteService {
             }
 
             // Create client membership and assign roles
-            if (invite.client_id && user) { // Ensure user is defined
+            if (invite.client_id && user) { 
                 const [membership] = await trx('client_memberships').insert({
                     user_id: user.id,
                     client_id: invite.client_id,

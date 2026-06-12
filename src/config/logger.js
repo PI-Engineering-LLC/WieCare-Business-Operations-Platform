@@ -10,32 +10,19 @@ const logger = winston.createLogger({
   ),
   transports: [
     new winston.transports.Console(), 
-    // new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    // new winston.transports.File({ filename: 'logs/combined.log' })
   ]
 });
 
-
-// Production Cloud Shipping
-if (process.env.NODE_ENV === 'production') {
-//   logger.add(new winston.transports.Loggly({
-//     token: process.env.LOGGLY_TOKEN, // Your secure API token
-//     subdomain: process.env.LOGGLY_SUBDOMAIN, // Your Loggly account name
-//     tags: ['express-app', 'production'],
-//     json: true
-//   }));
-// } else {
-  // Local Development: Keep it simple and colorized in the terminal
   logger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    )
+    format: process.env.NODE_ENV === 'production'
+    ? winston.format.simple() 
+    : winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      )
   }));
-}
 
-
-// 2. Configure Morgan Custom Format & Stream
+// Configure Morgan Custom Format & Stream
 const jsonFormat = (tokens, req, res) => {
     return JSON.stringify({
       method: tokens.method(req, res),

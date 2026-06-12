@@ -57,8 +57,6 @@ router.post('/', requireAuth,loadContext, adminOnly,
     delete invData.items; // don't overwrite items with undefined
   }
 
-  // const{_showCredit, tax_code,tax_rate,client_id,sending_entity, ...invData} = req.body
-  console.log("*******",client_id,tax_code )
   const [inv] = await db('invoices').insert({
     ...invData,
     items: JSON.stringify(req.body.items ?? []), 
@@ -120,7 +118,6 @@ router.patch('/:id', requireAuth,loadContext, adminOnly,
     } else {
       delete invData.payment_history; // don't overwrite items with undefined
     }
-    console.log(invData)
   const [inv] = await db('invoices').where({ id: req.params.id }).update({...invData, created_by: req.user.id}).returning('*');
   res.json(inv);
 }));

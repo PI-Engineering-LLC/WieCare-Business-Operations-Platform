@@ -5,7 +5,6 @@ const db = require('../db');
 function issueAccessToken(user, valid_for = '15m') {
     return jwt.sign(
         { userId: user.id},
-        // { id: user.id, email: user.email, role: user.role, client_role: user.client_role, client_id: user.client_id },
         process.env.JWT_SECRET,
         { expiresIn: valid_for } // short-lived
     );

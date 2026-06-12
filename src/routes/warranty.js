@@ -11,9 +11,6 @@ const clientScope = require('../middleware/clientScope');
 const asyncHandler = require('../middleware/asyncHandler');
 const auditMiddleware = require('../middleware/auditMiddleware');
 
-// const {
-//   canViewClaim,
-// } = require('../policies/claim.policy');
 
 router.get('/', requireAuth, loadContext, resolveClientContext, 
 //   permit(

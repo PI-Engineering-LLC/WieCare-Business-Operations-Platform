@@ -15,7 +15,6 @@ router.get('/', requireAuth,loadContext,resolveClientContext,
   let q = db('training_sessions').orderBy('session_date');
   if (req.query.status) q = q.where({ status: req.query.status });
   if (req.query.coaster_name) q = q.where({ coaster_name: req.query.coaster_name });
-  // q = clientScope(q, req);
   let result;
     if (req.query.id) {
       result = await q.where({ id: req.query.id }).first();
@@ -26,11 +25,6 @@ router.get('/', requireAuth,loadContext,resolveClientContext,
     res.json(result);
 }));
 
-// router.get('/:id', requireAuth, async (req, res) => {
-//   const session = await db('training_sessions').where({ id: req.params.id }).first();
-//   if (!session) return res.status(404).json({ error: 'Not found' });
-//   res.json(session);
-// });
 
 router.post('/', requireAuth,loadContext, adminOnly,
   auditMiddleware({action: 'training.created', resourceType:'training'}),
@@ -76,12 +70,6 @@ router.post('/registrations', requireAuth,loadContext,resolveClientContext,
   res.status(201).json(reg);
 }));
 
-// router.get('/registrations/me', requireAuth, async (req, res) => {
-//   const regs = await db('training_registrations')
-//     .where({ user_id: req.user.id })
-//     .orderBy('created_at', 'desc');
-//   res.json(regs);
-// });
 router.get('/registrations', requireAuth,loadContext,resolveClientContext,
   asyncHandler( async (req, res) => {
     let q =  db('training_registrations')
@@ -127,7 +115,6 @@ router.post('/requests', requireAuth,loadContext,resolveClientContext,
   asyncHandler( async (req, res) => {
     const clientId= req.body.client_id;
       const client = await db('clients').where({ id: clientId}).first();
-  console.log(client)
   const [tr] = await db('training_requests').insert({
     ...req.body,
     client_name: client?.company_name ||  '',
@@ -135,7 +122,6 @@ router.post('/requests', requireAuth,loadContext,resolveClientContext,
     user_id: req.user.id,
     user_email: req.user.email
   }).returning('*');
-  console.log(tr)
   res.status(201).json(tr);
 }));
 
@@ -153,8 +139,4 @@ router.delete('/:id', requireAuth,loadContext, adminOnly,
     res.json({ success: true });
   }));
 
-//   router.get('/registrations/all', requireAuth, adminOnly, async (req, res) => {
-//     const regs = await db('training_registrations').orderBy('created_at', 'desc');
-//     res.json(regs);
-//   });
 module.exports = router;

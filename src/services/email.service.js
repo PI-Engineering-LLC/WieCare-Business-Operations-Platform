@@ -3,13 +3,6 @@ const { sendEmail } = require('../mailer');
 const { initializeAndStartBoss, getBossInstance }  = require('../jobs/boss');
 
 class EmailService {
-//   constructor() {
-//     this._boss = null; // This will hold the PgBoss instance once injected
-// }
-// // Allows you to inject the started PgBoss instance
-// setBoss(boss) {
-//   this._boss = boss;
-// }
 
   // ── Template registry ──────────────────────────────────────────────
 
@@ -197,13 +190,9 @@ class EmailService {
  async  queue({ to, type, payload ,delaySeconds = 0}) {
   console.log(`Sending ${type} email to ${to} with URL ${payload.inviteUrl}`);
   console.log('TRACE: EmailService.queue called.', to, type, payload ,delaySeconds);
-  // const boss = this._boss || getBossInstance(); // Get the single, started instance
-  const boss = await initializeAndStartBoss(); // Calls initializeAndStartBoss
+  const boss = await initializeAndStartBoss(); 
   if (!boss) {
-    // console.error("Attempted to queue email, but pg-boss is not started. Check app startup logic.");
-    // You might want to throw an error or handle this differently based on desired behavior
-    // throw new Error("Email queuing service unavailable.");
-    console.error("PgBoss failed to start or is not started after initializeAndStartBoss. Critical error.");
+    console.error("Attempted to queue email, but PgBoss failed to start or is not started after initializeAndStartBoss. Critical error.");
       throw new Error("Email queuing service unavailable due to PgBoss startup failure.");
    
 }
@@ -212,7 +201,7 @@ class EmailService {
       {
         to: to,
         type: type,
-        payload: payload // This keeps your generic payload dynamic (e.g., { inviteUrl: "..." } or { token: "..." })
+        payload: payload // This keeps generic payload dynamic (e.g., { inviteUrl: "..." } or { token: "..." })
       },
       {startAfter:  delaySeconds > 0 ? new Date(Date.now() + delaySeconds * 1000) : undefined}
   );

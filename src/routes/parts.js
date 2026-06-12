@@ -63,7 +63,6 @@ router.delete('/:id', requireAuth,loadContext, adminOnly,
 // Part orders
 router.get('/orders', requireAuth,loadContext,resolveClientContext,
   asyncHandler( async (req, res) => {
-    console.log("**PARTS")
     
   let q = db('part_orders').orderBy('created_at', 'desc');
   
@@ -79,19 +78,10 @@ router.get('/orders', requireAuth,loadContext,resolveClientContext,
   res.json(result);
 }));
 
-// router.get('/orders/:id', requireAuth,loadContext,resolveClientContext, async (req, res) => {
-    
-//   const po = await db('part_orders').where({ id: req.params.id }).first();
-//   if (!po) return res.status(404).json({ error: 'Not found' });
-//   res.json(po);
-// });
-
 router.post('/orders', requireAuth,loadContext,resolveClientContext,holdCheck,
   auditMiddleware({action: 'part_order.created', resourceType:'part_order'}),
   asyncHandler( async (req, res) => {
   const client = await db('clients').where({ id: reqclientId }).first();
-  // if (client?.on_hold)
-  //   return res.status(403).json({ error: 'Account is on hold — please resolve outstanding invoices' });
 
   const [po] = await db('part_orders').insert({
     ...req.body,

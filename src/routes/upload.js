@@ -13,19 +13,11 @@ const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl: getSignedUrlForUpload  } = require('@aws-sdk/s3-request-presigner');
 const crypto = require('crypto');
 const path = require('path');
-// // POST /api/upload
-// router.post('/', requireAuth,loadContext,resolveClientContext, upload.single('file'), (req, res) => {
-//   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-//   res.json({ file_url: req.file.location }); // S3 URL
-// });
-
 
 // POST /api/upload (generates a presigned URL for client-side direct upload)
 router.post('/', requireAuth,loadContext,resolveClientContext,
   auditMiddleware({action: 'upload.created', resourceType:'upload'}),
   asyncHandler( async(req, res) => {
-  // if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  // res.json({ file_url: req.file.location }); // S3 URL
   try{
   const clientId = req.clientId; 
   const user = req.user;
