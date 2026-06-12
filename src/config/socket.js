@@ -10,7 +10,7 @@ function initSocket(server) {
     cors: {
       origin: process.env.ALLOWED_ORIGINS?.split(','),
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
+      allowedHeaders: ['Content-Type', 'Authorization','x-tenant-id'],
       credentials: true,
     },
     transports: ['websocket', 'polling'],
