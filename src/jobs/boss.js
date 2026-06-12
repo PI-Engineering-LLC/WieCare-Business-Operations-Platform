@@ -12,6 +12,7 @@ async function initializeAndStartBoss() {
      const databaseUrl =`${process.env.DATABASE_URL}`      
       bossInstance = new PgBoss({
         connectionString: databaseUrl,
+        ssl: { rejectUnauthorized: false },
         retryLimit: 5,
         retryDelay: 30,
         retryBackoff: true,

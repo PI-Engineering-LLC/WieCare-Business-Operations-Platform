@@ -11,6 +11,7 @@ module.exports = {
   production: {
     client: 'pg',
     connection: { connectionString: databaseUrl, ssl: { rejectUnauthorized: false } },
+    pool: { min: 2, max: 10},
     migrations: { directory: './src/migrations' },
     seeds: { directory: './src/seeds' }
   }
