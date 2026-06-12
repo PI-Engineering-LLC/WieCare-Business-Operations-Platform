@@ -8,34 +8,35 @@ let io;
 function initSocket(server) {
   io = new Server(server, {
     cors: {
-      origin: process.env.ALLOWED_ORIGINS?.split(',') ,
-      methods: ['GET', 'POST'],
+      origin: process.env.ALLOWED_ORIGINS?.split(','),
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
       credentials: true,
     },
     transports: ['websocket', 'polling'],
   });
 
   // Auth middleware — runs before every connection
-  io.use(async(socket, next) => {
+  io.use(async (socket, next) => {
     console.log('--- Socket.IO Auth Middleware ---');
     const headerValue = socket.request.headers.cookie;
-    
+
     if (!headerValue) {
       return next(new Error('Authentication error: No cookies found'));
-      
+
     }
     const rawCookies = socket.request.headers.cookie;
     console.log("===> COOKIES RECEIVED BY SOCKET:");
-  
-    if (!rawCookies) {
-    return next(new Error('Authentication error: No cookies found'));
-  }
-   const cookies = cookie.parse(rawCookies);
-   console.log("===> PARSED COOKIES:");
-   
-   const token = cookies.token || cookies.access_token || cookies.session || cookies.refresh_token;
 
-    
+    if (!rawCookies) {
+      return next(new Error('Authentication error: No cookies found'));
+    }
+    const cookies = cookie.parse(rawCookies);
+    console.log("===> PARSED COOKIES:");
+
+    const token = cookies.token || cookies.access_token || cookies.session || cookies.refresh_token;
+
+
     if (!token) {
       console.log('Reason for Unauthorized: No token provided.');
       return next(new Error('Unauthorized'));
@@ -44,8 +45,8 @@ function initSocket(server) {
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      const user = await db('users').where({id: decoded.userId, deleted_at: null}).first();
-      
+      const user = await db('users').where({ id: decoded.userId, deleted_at: null }).first();
+
       if (!user) {
         return next(new Error('Unauthorized'));
       }
@@ -59,9 +60,9 @@ function initSocket(server) {
     } catch (err) {
       console.error('JWT Verification Error:', err.name, err.message);
       if (err.name === 'TokenExpiredError') {
-          console.error('Token expired at:', err.expiredAt);
+        console.error('Token expired at:', err.expiredAt);
       } else if (err.name === 'JsonWebTokenError') {
-          console.error('Invalid token details:', err.message);
+        console.error('Invalid token details:', err.message);
       }
       console.error('Full JWT Error object:', err);
       next(new Error('Unauthorized'));
@@ -77,7 +78,7 @@ function initSocket(server) {
     socket.clientIds.forEach(clientId => socket.join(`client:${clientId}`));
 
     // Admins also join the admin broadcast room
-    if (['super_admin','internal_admin','internal_user'].includes(socket.user.platform_role)) {
+    if (['super_admin', 'internal_admin', 'internal_user'].includes(socket.user.platform_role)) {
       socket.join('admins');
     }
 
