@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const cors = require('cors');
 const passport = require('./config/passport');  
 const errorHandler= require('./middleware/errorHandler');
+app.enable('trust proxy'); 
 const { apiLimiter, authLimiter } = require('./middleware/rateLimit');
 const cookieParser = require('cookie-parser');
 const { logger, httpLogger } = require('./config/logger'); 
