@@ -9,8 +9,6 @@ const transporter = nodemailer.createTransport({
       pass: process.env.SMTP_PASS, 
     },
   tls: {
-    // This prevents Render from blocking the connection due to certificate mismatch
-    ciphers: 'SSLv3',
     rejectUnauthorized: false 
   }
   });
