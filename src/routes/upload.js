@@ -19,7 +19,7 @@ router.post('/', requireAuth,loadContext,resolveClientContext,
   auditMiddleware({action: 'upload.created', resourceType:'upload'}),
   asyncHandler( async(req, res) => {
   try{
-  const clientId = req.clientId; 
+  const clientId = req?.clientId; 
   const user = req.user;
   const { filename, contentType, type, isPrivate } = req.body;
   if (!filename || !contentType) {
@@ -33,10 +33,10 @@ router.post('/', requireAuth,loadContext,resolveClientContext,
   let targetBucket;
   if (type === 'thumbnail' || !isPrivate) {
     targetBucket = process.env.S3_PUBLIC_BUCKET;
-    uniqueKey = `${clientId}/users/user_${user.id}/${type || 'public'}_${uniqueId}${fileExtension}`;
+    uniqueKey = !!clientId? `${clientId}/public/users/user_${user.id}/${type || 'public'}_${uniqueId}${fileExtension}`: `public/users/user_${user.id}/${type || 'public'}_${uniqueId}${fileExtension}`;
   } else{
     targetBucket = process.env.S3_PRIVATE_BUCKET;
-    uniqueKey = `${clientId}/users/user_${user.id}/${type || 'documents'}/id_${uniqueId}${fileExtension}`;
+    uniqueKey = !!clientId?  `${clientId}/private/users/user_${user.id}/${type || 'documents'}/id_${uniqueId}${fileExtension}` : `private/users/user_${user.id}/${type || 'documents'}/id_${uniqueId}${fileExtension}`;
   }
   if (!targetBucket) {
     throw new Error(`Configuration Error: Target bucket for ${isPrivate ? 'private' : 'public'} files is not set.`);
@@ -70,12 +70,12 @@ router.post('/', requireAuth,loadContext,resolveClientContext,
 router.post('/view-private', requireAuth,loadContext,resolveClientContext,
   asyncHandler( async (req, res) => {
   try {
-    const clientId = req.clientId; 
+    const clientId = req?.clientId; 
     const user = req.user; // Populated by your auth middleware
     const { fileKey } = req.body; // e.g., "tenant_abc123/users/user_987/id_docs/passport.pdf"
 
     // 1. RBAC & Tenant Protection Guardrails
-    if (!(req.user.isInternalAdmin || fileKey.startsWith(`${clientId}/`) || fileKey.startsWith(`undefined`))) {
+    if (!(req.user.isInternalAdmin || fileKey.startsWith(`${clientId}/public/`) || fileKey.startsWith(`${clientId}/private/`) || fileKey.startsWith(`public`))) {
       return res.status(403).json({ error: "Access denied: Tenant mismatch." });
     }
 

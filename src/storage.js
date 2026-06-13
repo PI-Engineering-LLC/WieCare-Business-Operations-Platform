@@ -1,8 +1,8 @@
 const multer = require('multer');
 const multerS3 = require('multer-s3');
 const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
-const { getSignedUrl: awsGetSignedUrl  } = require('@aws-sdk/s3-request-presigner');
-const fs   = require('fs');
+const { getSignedUrl: awsGetSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
@@ -15,10 +15,10 @@ const PRIVATE_BUCKET = process.env.S3_PRIVATE_BUCKET; // For private documents l
 let s3Client;
 if (DRIVER !== 'local') {
   s3Client = new S3Client({
-    region:   process.env.S3_REGION    || 'auto',  // R2 uses 'auto'
+    region: process.env.S3_REGION || 'auto',  // R2 uses 'auto'
     endpoint: process.env.S3_ENDPOINT,              // R2: https://<account>.r2.cloudflarestorage.com
     credentials: {
-      accessKeyId:     process.env.S3_ACCESS_KEY,
+      accessKeyId: process.env.S3_ACCESS_KEY,
       secretAccessKey: process.env.S3_SECRET_KEY,
     },
     // R2 requires path-style — as does MinIO
@@ -54,10 +54,10 @@ async function uploadFile(fileBuffer, originalName, mimeType, folder = 'general'
   }
   // ─── S3 / R2 / MinIO ───
   const commandParams = {
-    Bucket:      targetBucket,
-    Key:         uniqueKey,
+    Bucket: targetBucket,
+    Key: uniqueKey,
     ContentType: mimeType,
-    Body:        fileBuffer,
+    Body: fileBuffer,
   };
   // Only set ACL for public files.
   // Note: Cloudflare R2 does NOT support ACLs — public access is controlled
@@ -87,7 +87,7 @@ async function uploadFile(fileBuffer, originalName, mimeType, folder = 'general'
  * Get a signed URL for private file access.
  * Default 1 hour expiry.
  */
-async function getSignedUrl(key, expirySeconds = 3600, bucket){
+async function getSignedUrl(key, expirySeconds = 3600, bucket) {
   if (DRIVER === 'local') {
     return `${process.env.BACKEND_URL}/uploads/${key}`;
   }
@@ -128,7 +128,7 @@ const upload = multer({
       const ext = path.extname(file.originalname);
       // Ensure req.clientId and req.user.id are populated by preceding middleware
       const folder = req.user?.id ? `users/${req.user.id}/avatars` : 'general'; // Example path
-      cb(null, `${req.clientId}/${folder}/${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext}`);
+      cb(null, `${(req?.clientId) ? req.clientId + '/' : ''}${folder}/${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext}`);
     },
     contentType: multerS3.AUTO_CONTENT_TYPE, // Auto-detect content type
   }),
@@ -168,7 +168,7 @@ const uploadMiddleware = multer({
       // Public: clientId/users/userId/avatars/uniqueId.jpg
       // Private: clientId/users/userId/documents/uniqueId.pdf
       const baseFolder = isPrivate ? 'documents' : (req.body.type || 'general'); // Use req.body.type if specified
-      const finalKey = `${req.clientId}/users/${req.user.id}/${baseFolder}/${uniqueId}${fileExtension}`;
+      const finalKey = `${req?.clientId ? req.clientId + '/' : ''}users/${req.user.id}/${baseFolder}/${uniqueId}${fileExtension}`;
       cb(null, finalKey);
     },
     contentType: multerS3.AUTO_CONTENT_TYPE, // Automatically detect and set content type
@@ -195,4 +195,4 @@ const uploadMiddleware = multer({
   }
 });
 
-module.exports = { upload, s3Client, getSignedUrl, deleteFile, uploadFile,uploadMiddleware };
+module.exports = { upload, s3Client, getSignedUrl, deleteFile, uploadFile, uploadMiddleware };
