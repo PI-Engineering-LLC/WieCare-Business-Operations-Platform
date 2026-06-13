@@ -1,6 +1,6 @@
 const multer = require('multer');
 const multerS3 = require('multer-s3');
-const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand, HeadObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl: awsGetSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const fs = require('fs');
 const path = require('path');
@@ -96,6 +96,23 @@ async function getSignedUrl(key, expirySeconds = 3600, bucket) {
     bucket = key.includes('/private/') || key.includes('/documents/') ? PRIVATE_BUCKET : PUBLIC_BUCKET;
     if (!bucket) throw new Error('Bucket not specified and could not be inferred for signed URL.');
   }
+  // 2. CHECK IF THE FILE ACTUALLY EXISTS IN R2 FIRST
+  try {
+    await s3Client.send(new HeadObjectCommand({
+      Bucket: bucket,
+      Key: key
+    }));
+  } catch (s3Error) {
+    
+    // If R2 returns a 404/NotFound error
+    if (s3Error.name === "NotFound" || s3Error.$metadata?.httpStatusCode === 404) {
+      const error = new Error("File not found in storage");
+      error.code = "R2_FILE_NOT_FOUND";
+      throw error;
+    }
+    throw s3Error; // Rethrow other network/permission errors
+  }
+
   return awsGetSignedUrl(
     s3Client,
     new GetObjectCommand({ Bucket: bucket, Key: key }),

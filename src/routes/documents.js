@@ -44,12 +44,14 @@ router.get('/', requireAuth, loadContext, resolveClientContext,
 
 router.get('/:id/download', requireAuth, loadContext, resolveClientContext,
   asyncHandler(async (req, res) => {
+    
     const { id } = req.params;
     const clientId = req.clientId;
     const doc = await db('documents').where({ id }).first();
     if (!doc) {
       return res.status(404).json({ error: 'Document not found' });
     }
+    const documentId = doc.id
     // Determine the correct bucket based on the document's privacy status
     const targetBucket = doc.is_private ? process.env.S3_PRIVATE_BUCKET : process.env.S3_PUBLIC_BUCKET;
 
@@ -57,8 +59,31 @@ router.get('/:id/download', requireAuth, loadContext, resolveClientContext,
       // This indicates a server configuration issue if the bucket environment variable isn't set
       return res.status(500).json({ error: 'Server configuration error: Document storage bucket not defined.' });
     }
+    try{
+    
+    
     const temporaryViewUrl = await storageGetSignedUrl(doc.file_storage_key, 300, targetBucket);
+    
     res.json({ downloadUrl: temporaryViewUrl });
+    }catch(error){
+      if (error.code === "R2_FILE_NOT_FOUND") {
+        console.warn(`File missing for doc ${documentId}. Cleaning up database.`);
+        
+        // Remove the orphaned record from Postgres
+        await db('documents').where({ id: documentId}).update({ file_storage_key: null, status: 'archived' });
+        
+        return res.status(404).json({
+          code: "FILE_MISSING_IN_STORAGE",
+          message: "The document was missing from storage and has been removed from the registry."
+        });
+      }
+  
+      // Handle normal server/database crashes
+      console.error("Unexpected error in document route:", error);
+      return res.status(500).json({ message: "Internal server error." });
+   
+    
+  }
 
   }));
 // router.get('/:id', requireAuth, async (req, res) => {

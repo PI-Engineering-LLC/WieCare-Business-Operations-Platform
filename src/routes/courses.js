@@ -8,6 +8,8 @@ const adminOnly = require('../middleware/adminOnly');
 const clientScope = require('../middleware/clientScope');
 const asyncHandler = require('../middleware/asyncHandler');
 const auditMiddleware = require('../middleware/auditMiddleware');
+const { getSignedUrl: storageGetSignedUrl, deleteFile } = require('../storage');
+
 
 // Courses
 router.get('/', requireAuth, loadContext, resolveClientContext,
@@ -30,6 +32,7 @@ router.get('/:id/download', requireAuth, loadContext, resolveClientContext,
     const clientId = req.clientId;
     const course = await db('courses').where({ id }).first();
     if (!course) return res.status(404).json({ error: 'Not found' });
+    const courseId = course.id
     // Determine the correct bucket based on the document's privacy status
     const targetBucket = course.is_private ? process.env.S3_PRIVATE_BUCKET : process.env.S3_PUBLIC_BUCKET;
 
@@ -37,8 +40,28 @@ router.get('/:id/download', requireAuth, loadContext, resolveClientContext,
       // This indicates a server configuration issue if the bucket environment variable isn't set
       return res.status(500).json({ error: 'Server configuration error: Document storage bucket not defined.' });
     }
-    const temporaryViewUrl = await storageGetSignedUrl(course.thumbnail_storage_key, 300, targetBucket);
+    try{
+    const temporaryViewUrl = await storageGetSignedUrl(course.video_storage_key, 300, targetBucket);
     res.json({ downloadUrl: temporaryViewUrl });
+    }catch(error){
+      if (error.code === "R2_FILE_NOT_FOUND") {
+        console.warn(`File missing for doc ${courseId}. Cleaning up database.`);
+        
+        // Remove the orphaned record from Postgres
+        await db('courses').where({ id: courseId }).update({ video_storage_key: null , status: 'archived'});
+        
+        return res.status(404).json({
+          code: "FILE_MISSING_IN_STORAGE",
+          message: "The course was missing from storage and has been removed from the registry."
+        });
+      }
+  
+      // Handle normal server/database crashes
+      console.error("Unexpected error in course route:", error);
+      return res.status(500).json({ message: "Internal server error." });
+   
+    
+  } 
 
   }));
 

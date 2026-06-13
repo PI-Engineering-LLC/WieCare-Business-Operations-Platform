@@ -87,10 +87,26 @@ router.post('/view-private', requireAuth,loadContext,resolveClientContext,
     //   return res.status(403).json({ error: "You do not have permission to view this document." });
     // } // Allow client to view files owned and uploaded by admin
     const linkExpiration = 3600; //3600s or 1h
-
+    try{
     const downloadUrl = await getSignedUrl(fileKey, linkExpiration, process.env.S3_PRIVATE_BUCKET);
     // 3. Return the temporary absolute URL to React
     return res.json({ downloadUrl });
+    }catch(error){
+      if (error.code === "R2_FILE_NOT_FOUND") {
+        console.warn(`File missing for document`);
+        
+        
+        return res.status(404).json({
+          code: "FILE_MISSING_IN_STORAGE",
+        });
+      }
+  
+      // Handle normal server/database crashes
+      console.error("Unexpected error getting file url:", error);
+      return res.status(500).json({ message: "Internal server error." });
+   
+    
+  } 
 
   } catch (error) {
     console.error(error);
