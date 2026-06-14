@@ -117,10 +117,12 @@ router.post('/requests', requireAuth,loadContext,resolveClientContext,
     const clientName=''
     if(clientId){
       const client = await db('clients').where({ id: clientId}).first();
-      if (!client || !req.user.isInternalAdmin) {
+      if (!client) {
         return res.status(404).json({ error: 'Client not found' });
       }
       clientName =client?.company_name ||  ''
+    }else{
+      return res.status(404).json({ error: 'Client required not found' });
     }
       
       
