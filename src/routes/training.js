@@ -114,11 +114,20 @@ router.post('/requests', requireAuth,loadContext,resolveClientContext,
   auditMiddleware({action: 'training_request.created', resourceType:'training_request'}),
   asyncHandler( async (req, res) => {
     const clientId= req.body.client_id;
+    const clientName=''
+    if(clientId){
       const client = await db('clients').where({ id: clientId}).first();
+      if (!client || !req.user.isInternalAdmin) {
+        return res.status(404).json({ error: 'Client not found' });
+      }
+      clientName =client?.company_name ||  ''
+    }
+      
+      
   const [tr] = await db('training_requests').insert({
     ...req.body,
-    client_name: client?.company_name ||  '',
-    client_id: client?.id,
+    client_name: clientName,
+    client_id: clientId || null,
     user_id: req.user.id,
     user_email: req.user.email
   }).returning('*');
