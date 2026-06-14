@@ -39,6 +39,7 @@ router.post('/', requireAuth,loadContext,resolveClientContext,holdCheck,
     ...req.body,
     client_id: req.clientId || req.body.client_id ,
     client_name: client?.company_name,
+    attachments: JSON.stringify(req.body.attachments ?? []),
     created_by: req.user.id,
     request_number: `MR-${Date.now().toString().slice(-6)}`
   }).returning('*');
@@ -47,7 +48,7 @@ router.post('/', requireAuth,loadContext,resolveClientContext,holdCheck,
 router.patch('/:id', requireAuth,loadContext, adminOnly, 
   auditMiddleware({action: 'maintenance.updated', resourceType:'maintenance'}),
   asyncHandler( async (req, res) => {
-  const [mr] = await db('maintenance_requests').where({ id: req.params.id }).update(req.body).returning('*');
+  const [mr] = await db('maintenance_requests').where({ id: req.params.id }).update({...req.body,attachments: JSON.stringify(req.body.attachments ?? [])}).returning('*');
   res.json(mr);
 }));
 

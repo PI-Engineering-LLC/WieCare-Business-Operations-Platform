@@ -97,6 +97,7 @@ router.post('/', requireAuth, loadContext, requireRoles(['client_admin', 'super_
   asyncHandler(async (req, res) => {
     const [doc] = await db('documents').insert({
       ...req.body,
+      tags: JSON.stringify(req.body.tags ?? []),
       created_by: req.user.id
     }).returning('*');
     res.status(201).json(doc);
@@ -105,7 +106,7 @@ router.post('/', requireAuth, loadContext, requireRoles(['client_admin', 'super_
 router.patch('/:id', requireAuth, loadContext, adminOnly,
   auditMiddleware({ action: 'document.updated', resourceType: 'document' }),
   asyncHandler(async (req, res) => {
-    const [doc] = await db('documents').where({ id: req.params.id }).update(req.body).returning('*');
+    const [doc] = await db('documents').where({ id: req.params.id }).update({...req.body,tags: JSON.stringify(req.body.tags ?? [])}).returning('*');
     res.json(doc);
   }));
 
