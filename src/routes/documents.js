@@ -13,7 +13,7 @@ const { getSignedUrl: storageGetSignedUrl, deleteFile } = require('../storage');
 
 router.get('/', requireAuth, loadContext, resolveClientContext,
   asyncHandler(async (req, res) => {
-    let q = db('documents').where({ status: 'active' }).orderBy('created_at', 'desc');
+    let q = db('documents').where({ status: 'active' }).whereNotNull('file_storage_key').whereNot('status', 'archived').orderBy('created_at', 'desc');
 
     if (!req.user.isInternalAdmin) {
       // Clients see: public docs matching their coaster, OR their own private docs
@@ -47,7 +47,7 @@ router.get('/:id/download', requireAuth, loadContext, resolveClientContext,
     
     const { id } = req.params;
     const clientId = req.clientId;
-    const doc = await db('documents').where({ id }).first();
+    const doc = await db('documents').where({ id }).whereNotNull('file_storage_key') .whereNot('status', 'archived').first();
     if (!doc) {
       return res.status(404).json({ error: 'Document not found' });
     }
@@ -106,7 +106,16 @@ router.post('/', requireAuth, loadContext, requireRoles(['client_admin', 'super_
 router.patch('/:id', requireAuth, loadContext, adminOnly,
   auditMiddleware({ action: 'document.updated', resourceType: 'document' }),
   asyncHandler(async (req, res) => {
-    const [doc] = await db('documents').where({ id: req.params.id }).update({...req.body,tags: JSON.stringify(req.body.tags ?? [])}).returning('*');
+    const newData = req.body;
+    const currentDoc = await db('documents').where({ id: req.params.id }).first(); 
+    if (newData.file_storage_key && newData.file_storage_key !== currentDoc.file_storage_key) {
+      try {
+        await deleteFile(currentDoc.file_storage_key, true); //All documents are private on r2, avatars are public
+      } catch (err) {
+        console.error("Failed to delete old file from R2", err);
+      }
+    }
+    const [doc]= await db('documents').where({ id: req.params.id }).update({...newData,tags: JSON.stringify(req.body.tags ?? [])}).returning('*');
     res.json(doc);
   }));
 

@@ -14,7 +14,7 @@ const { getSignedUrl: storageGetSignedUrl, deleteFile } = require('../storage');
 // Courses
 router.get('/', requireAuth, loadContext, resolveClientContext,
   asyncHandler(async (req, res) => {
-    let q = db('courses').orderBy('order_index');
+    let q = db('courses').whereNot('status', 'archived').orderBy('order_index');
     if (req.query.status) q = q.where({ status: req.query.status });
     if (!req.user.isInternalAdmin) q = q.where({ status: 'published' });
     let result;
@@ -75,6 +75,22 @@ router.post('/', requireAuth, loadContext, adminOnly,
 router.patch('/:id', requireAuth, loadContext, resolveClientContext,
   auditMiddleware({ action: 'course.updated', resourceType: 'course' }),
   asyncHandler(async (req, res) => {
+    const newData = req.body;
+    const currentCourse = await db('courses').where({ id: req.params.id }).first();
+    if (newData.video_storage_key && newData.video_storage_key !== currentCourse.video_storage_key) {
+      try {
+        await deleteFile(currentCourse.video_storage_key, true); //All videos are private on r2, avatars are public
+      } catch (err) {
+        console.error("Failed to delete old file from R2", err);
+      }
+    }
+    if (newData.thumbnail_storage_key && newData.thumbnail_storage_key !== currentCourse.thumbnail_storage_key) {
+      try {
+        await deleteFile(currentCourse.thumbnail_storage_key); //All videos are private on r2, avatars are public
+      } catch (err) {
+        console.error("Failed to delete old file from R2", err);
+      }
+    }
     const [course] = await db('courses').where({ id: req.params.id }).update(req.body).returning('*');
     res.json(course);
   }));
@@ -82,6 +98,8 @@ router.patch('/:id', requireAuth, loadContext, resolveClientContext,
 router.delete('/:id', requireAuth, loadContext, adminOnly,
   auditMiddleware({ action: 'course.deleted', resourceType: 'course' }),
   asyncHandler(async (req, res) => {
+    const currentCourse = await db('courses').where({ id: req.params.id }).first();
+    await deleteFile(currentCourse.thumbnail_storage_key);
     await db('courses').where({ id: req.params.id }).delete();
     res.json({ success: true });
   }));

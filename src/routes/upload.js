@@ -70,7 +70,7 @@ router.post('/', requireAuth,loadContext,resolveClientContext,
 router.post('/view-private', requireAuth,loadContext,resolveClientContext,
   asyncHandler( async (req, res) => {
   try {
-    const clientId = req?.clientId; 
+    const clientId = req?.body.client_id || req?.clientId; 
     const user = req.user; // Populated by your auth middleware
     const { fileKey } = req.body; // e.g., "tenant_abc123/users/user_987/id_docs/passport.pdf"
 
