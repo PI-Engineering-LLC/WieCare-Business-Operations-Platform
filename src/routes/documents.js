@@ -70,7 +70,7 @@ router.get('/:id/download', requireAuth, loadContext, resolveClientContext,
         console.warn(`File missing for doc ${documentId}. Cleaning up database.`);
         
         // Remove the orphaned record from Postgres
-        await db('documents').where({ id: documentId}).update({ file_storage_key: null, status: 'archived' });
+        await db('documents').where({ id: documentId}).update({status: 'archived' });
         
         return res.status(404).json({
           code: "FILE_MISSING_IN_STORAGE",
