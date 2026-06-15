@@ -115,7 +115,7 @@ router.post('/requests', requireAuth,loadContext,resolveClientContext,
   asyncHandler( async (req, res) => {
     const clientId= req.body.client_id;
     console.log('######', clientId)
-    const clientName=''
+    let clientName=''
     if(clientId){
       const client = await db('clients').where({ id: clientId}).first();
       if (!client) {
