@@ -75,7 +75,7 @@ router.post('/view-private', requireAuth,loadContext,resolveClientContext,
     const { fileKey } = req.body; // e.g., "tenant_abc123/users/user_987/id_docs/passport.pdf"
 
     // 1. RBAC & Tenant Protection Guardrails
-    if (!(req.user.isInternalAdmin || fileKey.startsWith(`${clientId}/public/`) || fileKey.startsWith(`${clientId}/private/`) || fileKey.startsWith(`public`))) {
+    if (!(req.user.isInternalAdmin || fileKey.startsWith(`${clientId ? clientId + "/" : '' }public/`) || fileKey.startsWith(`${clientId ? clientId + "/" : '' }private/`) || fileKey.startsWith(`public`))) {
       return res.status(403).json({ error: "Access denied: Tenant mismatch." });
     }
 
