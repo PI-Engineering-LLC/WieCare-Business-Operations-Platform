@@ -114,7 +114,6 @@ router.post('/requests', requireAuth,loadContext,resolveClientContext,
   auditMiddleware({action: 'training_request.created', resourceType:'training_request'}),
   asyncHandler( async (req, res) => {
     const clientId= req.body.client_id;
-    console.log('######', clientId)
     let clientName=''
     if(clientId){
       const client = await db('clients').where({ id: clientId}).first();
