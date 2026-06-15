@@ -13,7 +13,7 @@
     "seed:roles": "node src/seeds/roles.js",
     "seed:permissions": "node src/seeds/permissions.js",
     "seed:all": "npm run seed:permissions && npm run seed:roles && npm run seed:admin",
-    "render:start": "npm run migrate && npm run seed:all && npm run start"
+    "render:start": "npm run migrate && npm run seed:admin && npm run start"
   },
   "keywords": [],
   "author": "",
