@@ -51,7 +51,7 @@ router.get('/:id/download', requireAuth, loadContext, resolveClientContext,
         await db('courses').where({ id: courseId }).update({ video_storage_key: null , status: 'archived'});
         
         return res.status(404).json({
-          code: "FILE_MISSING_IN_STORAGE",
+          error: "FILE_MISSING_IN_STORAGE",
           message: "The course was missing from storage and has been removed from the registry."
         });
       }

@@ -73,7 +73,7 @@ router.get('/:id/download', requireAuth, loadContext, resolveClientContext,
         await db('documents').where({ id: documentId}).update({status: 'archived' });
         
         return res.status(404).json({
-          code: "FILE_MISSING_IN_STORAGE",
+          error: "FILE_MISSING_IN_STORAGE",
           message: "The document was missing from storage and has been removed from the registry."
         });
       }
