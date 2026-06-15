@@ -18,6 +18,7 @@ router.get('/', requireAuth, loadContext, resolveClientContext,
     // Platform admins can request all notifications by leaving recipient_id/client_id out
     if (req.user.isInternalAdmin && !req.query.recipient_id && !req.query.client_id) {
         // No specific filtering needed for super/platform admins if they want everything
+        if (req.query.user_id) q = q.where({ recipient_id: req.query.user_id});
     } else {
         // For regular users or admins specifying filters, apply recipient/client filtering
         q.where(function() {
@@ -25,7 +26,11 @@ router.get('/', requireAuth, loadContext, resolveClientContext,
             this.where('recipient_id', req.user.id)
                 .orWhere('recipient_email', req.user.email); // Always include notifications by email
             // If user is part of a client, also include client-scoped notifications for them
-            if (req.clientId) {
+            // if (req.clientId) {
+            //     this.orWhere('client_id', req.clientId);
+            // }
+            //
+            if (req.clientId && req.membership.roles.some(role => ['client_admin'].includes(role.name))) {
                 this.orWhere('client_id', req.clientId);
             }
         });
