@@ -143,7 +143,7 @@ router.get('/:id/progress', requireAuth, loadContext, resolveClientContext,
 router.post('/:id/progress', requireAuth, loadContext, resolveClientContext,
   auditMiddleware({ action: 'course_progress.created', resourceType: 'course_progress' }),
   asyncHandler(async (req, res) => {
-    let { status, started_at, progress_percent, watch_time_seconds, last_watched_at, completed_at, duration_minutes } = req.body;
+    let { status, started_at, progress_percent, watch_time_seconds, last_watched_at, completed_at, course_title} = req.body;
     const watch_time = Math.max(0, Number(watch_time_seconds) || 0);
     const progressPercent = Math.max(0, Number(progress_percent) || 0);;
 
@@ -156,6 +156,7 @@ router.post('/:id/progress', requireAuth, loadContext, resolveClientContext,
         progress_percent: progressPercent,
         watch_time_seconds: watch_time,
         status,
+        course_title,
         started_at,
         completed_at: completed_at || null,
         last_watched_at: last_watched_at || new Date()
