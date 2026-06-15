@@ -132,7 +132,9 @@ router.post('/requests', requireAuth,loadContext,resolveClientContext,
     client_name: clientName,
     client_id: clientId || null,
     user_id: req.user.id,
-    user_email: req.user.email
+    user_email: req.user.email,
+    preferred_date_1: req.body.preferred_date_1 || null,
+    preferred_date_2: req.body.preferred_date_2 || null
   }).returning('*');
   res.status(201).json(tr);
 }));

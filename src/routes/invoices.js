@@ -45,9 +45,6 @@ router.post('/', requireAuth,loadContext, adminOnly,
   if (invData['issue_date'] === '') {
     invData['issue_date'] = new Date();
   }
-  if (invData['due_date'] === '') {
-    invData['due_date'] = invData['issue_date'];
-  }
   if (invData['order_id'] === '') {
     invData['order_id'] = null;
   }
