@@ -41,6 +41,8 @@ router.get('/', requireAuth, loadContext, requireRoles(['client_admin', 'super_a
       'users.last_login_at',
       'users.created_at',
       'users.avatar_storage_key',
+      'users.status',
+      'users.job_title',
       db.raw(`
         COALESCE(
           jsonb_agg( 
