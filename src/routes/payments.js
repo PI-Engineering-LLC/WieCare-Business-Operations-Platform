@@ -166,6 +166,8 @@ router.post('/ipospays/createPaymentSession', requireAuth,loadContext,resolveCli
     let formattedPhoneNo;
     if(client.contact_phone)
     formattedPhoneNo = normalizePhone(client.contact_phone)
+
+    console.log(formattedPhoneNo)
   
   const config = {
     headers: {
