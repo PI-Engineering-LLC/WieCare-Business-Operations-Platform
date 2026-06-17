@@ -11,6 +11,7 @@ const auditMiddleware = require('../middleware/auditMiddleware');
 const axios = require('axios')
 const notificationService = require('../services/notifications.service'); 
 const {getIO} = require('../config/socket')
+const normalizePhone= require('../utils/phone')
 
 router.post('/webhook/ipospays',
   auditMiddleware({action: 'payment.created', resourceType:'payment'}),
@@ -161,9 +162,10 @@ router.post('/ipospays/createPaymentSession', requireAuth,loadContext,resolveCli
     const invoice = await db('invoices').where({ id: invoiceId }).first();
   if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
   const amountInCents = Math.round(invoice.balance_due * 100);
- console.log('TRACE 1',amountInCents)
     const client = await db('clients').where({ id: invoice.client_id || req.clientId }).first();
-    console.log('TRACE 1',invoice.clientId,invoice.client_id,req.clientId, invoice.id,invoice.invoice_number,client.contact_email,client.contact_phone)
+    let formattedPhoneNo;
+    if(client.contact_phone)
+    formattedPhoneNo = normalizePhone(client.contact_phone)
   
   const config = {
     headers: {
@@ -201,7 +203,7 @@ const body = {
     "integrationType": 1,
     "avsVerification": false,
     "eReceipt": true,
-    "eReceiptInputPrompt": false,
+    "eReceiptInputPrompt": formattedPhoneNo?.length !== 13,
     "customerEmail": client.contact_email,
     "customerMobile": client.contact_phone,
     "requestCardToken": true,
@@ -218,7 +220,6 @@ const body = {
 
 
 try {
-  console.log(config, body)
   const response = await axios.post(`${process.env.IPOSPAYS_API_URL}`, body, config);
   if (response.data.information) {
       res.json({ url: response.data.information });
@@ -226,8 +227,8 @@ try {
       res.status(400).json({ error: "Failed to generate URL" });
   }
 } catch (error) {
-  console.error(error.response?.data || error.message || errors.message);
-  res.status(500).json({ error: "Gateway connection error" });
+  console.error(error.response?.data || error.message );
+  res.status(500).json({ error: error.response?.data || error.message ||"Gateway connection error" });
 }
 
 
