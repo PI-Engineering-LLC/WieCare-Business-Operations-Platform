@@ -11,7 +11,7 @@ const auditMiddleware = require('../middleware/auditMiddleware');
 const axios = require('axios')
 const notificationService = require('../services/notifications.service'); 
 const {getIO} = require('../config/socket')
-const normalizePhone= require('../utils/phone')
+const {formatToStrict13}= require('../utils/phone')
 
 router.post('/webhook/ipospays',
   auditMiddleware({action: 'payment.created', resourceType:'payment'}),
@@ -165,9 +165,7 @@ router.post('/ipospays/createPaymentSession', requireAuth,loadContext,resolveCli
     const client = await db('clients').where({ id: invoice.client_id || req.clientId }).first();
     let formattedPhoneNo;
     if(client.contact_phone)
-    formattedPhoneNo = normalizePhone(client.contact_phone)
-
-    console.log(formattedPhoneNo)
+    formattedPhoneNo = formatToStrict13(client.contact_phone)
   
   const config = {
     headers: {
