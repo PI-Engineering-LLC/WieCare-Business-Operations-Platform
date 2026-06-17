@@ -218,6 +218,7 @@ const body = {
 
 
 try {
+  console.log(config, body)
   const response = await axios.post(`${process.env.IPOSPAYS_API_URL}`, body, config);
   if (response.data.information) {
       res.json({ url: response.data.information });
