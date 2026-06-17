@@ -205,7 +205,7 @@ const body = {
     "eReceipt": true,
     "eReceiptInputPrompt": formattedPhoneNo?.length !== 13,
     "customerEmail": client.contact_email,
-    "customerMobile": client.contact_phone,
+    "customerMobile": formattedPhoneNo,
     "requestCardToken": true,
     "shortenURL": true,
     "sendPaymentLink": true, 
