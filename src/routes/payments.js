@@ -228,7 +228,7 @@ try {
   }
 } catch (error) {
   console.error(error.response?.data || error.message );
-  res.status(500).json({ error: error.response?.data || error.message ||"Gateway connection error" });
+  res.status(500).json({ error: error.errors?.[0]?.message || error.response?.data || error.message ||"Gateway connection error" });
 }
 
 
