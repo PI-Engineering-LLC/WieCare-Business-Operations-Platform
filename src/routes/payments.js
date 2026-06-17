@@ -161,9 +161,9 @@ router.post('/ipospays/createPaymentSession', requireAuth,loadContext,resolveCli
     const invoice = await db('invoices').where({ id: invoiceId }).first();
   if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
   const amountInCents = Math.round(invoice.balance_due * 100);
-
+ console.log('TRACE 1',amountInCents)
     const client = await db('clients').where({ id: invoice.clientId || req.clientId }).first();
-  
+    console.log('TRACE 1',invoice.clientId,invoice.client_id,req.clientId, invoice.id,invoice.invoice_number,client.contact_email,client.contact_phone)
   
   const config = {
     headers: {
