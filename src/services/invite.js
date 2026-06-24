@@ -39,8 +39,25 @@ class InviteService {
                 })
                 .returning('*');
 
+                const inviter = await trx('users')
+                .where({ id: invitedBy, deleted_at: null })
+                .first(); 
+                let inviterOrg;  
+                let inviterOrgName;
+                let inviterOrgCoaster;
+                inviterOrg = await trx('clients')
+                .where({ id: clientId })
+                .first();
+
             const inviteUrl = `${process.env.FRONTEND_URL}/accept-invite/${invite_token}`;
-            await emailService.queue({ to: normalizedEmail, type: 'invite', payload: { inviteUrl, inviteType } });
+            const inviterName = inviter?.full_name
+            if(inviterOrg){
+                inviterOrgName = inviterOrg?.company_name
+                inviterOrgCoaster = inviterOrg?.coaster_name
+            }
+            
+
+            await emailService.queue({ to: normalizedEmail, type: 'invite', payload: { inviteUrl, inviterName, inviterOrgName, inviterOrgCoaster, inviteType } });
             return { id: invite.id, email: normalizedEmail, inviteUrl, invite_expires_at };
         }
         );

@@ -184,7 +184,7 @@ router.patch('/:id', requireAuth, loadContext, resolveClientContext,
     }
     res.json(quote);
   }));
-router.delete('/:id', requireAuth, adminOnly,
+router.delete('/:id', requireAuth, loadContext, adminOnly,
   auditMiddleware({ action: 'quote.deleted', resourceType: 'quote' }),
   asyncHandler(async (req, res) => {
     const { id } = req.params;

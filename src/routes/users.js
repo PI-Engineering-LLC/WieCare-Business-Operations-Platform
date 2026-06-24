@@ -47,15 +47,15 @@ router.get('/', requireAuth, loadContext, requireRoles(['client_admin', 'super_a
         COALESCE(
           jsonb_agg( 
             DISTINCT jsonb_build_object( 
-              'membership_id', cm.id, -- CHANGED: Renamed 'id' to 'membership_id' for consistency
+              'membership_id', cm.id,
               'client_id', cm.client_id,
               'client_name', c.company_name,
               'is_active', cm.is_active,
               'created_at', cm.created_at,
-              'joined_at', cm.created_at, -- CHANGED: Ensure joined_at is present
+              'joined_at', cm.created_at, 
               'roles', (
                 SELECT (COALESCE(
-                           jsonb_agg(jsonb_build_object('id', r.id, 'name', r.name, 'client_id', r.client_id)) FILTER (WHERE r.id IS NOT NULL), -- CHANGED: Added r.client_id
+                           jsonb_agg(jsonb_build_object('id', r.id, 'name', r.name, 'client_id', r.client_id)) FILTER (WHERE r.id IS NOT NULL),
                            '[]'::jsonb
                          ))::jsonb
                 FROM membership_roles AS mr_inner

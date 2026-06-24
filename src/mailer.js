@@ -12,10 +12,10 @@ const transporter = nodemailer.createTransport({
     rejectUnauthorized: false 
   }
   });
-  const sendEmail = async ({ to, subject, body }) =>{
+  const sendEmail = async ({ to, subject, body, from }) =>{
     try {
         const info = await transporter.sendMail({
-            from: `"Wiegand" <${process.env.EMAIL_FROM}>`,
+            from: ` ${from || "Wiegand"} <${process.env.EMAIL_FROM}>`,
             to, subject,
             html: body
 

@@ -140,10 +140,16 @@ class EmailService {
     };
   }
 
-   buildInvitationEmail({ inviteUrl}) {
+   buildInvitationEmail({ inviteUrl, inviterName, inviterOrgName, inviterOrgCoaster}) {
     return {
-      subject: 'You\'ve been invited to Wiegand Portal',
-      html: `<p>Click the link below to set your password and access your account:</p>
+      from: `${inviterOrgName} via Wiegand` ,
+      subject: 'You\'ve been invited to Wiegand USA Customer Portal',
+      html: `<p>Hello!</p>
+<p>
+  <strong>${inviterName}</strong> has invited you to join 
+  <strong>${inviterOrgName || 'Wiegand USA Customer Portal'}</strong> on our platform.
+</p>
+      <p>Click the link below to set your password and access your account:</p>
            <p><a href="${inviteUrl}" style="background:#1e3a5f;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;">Accept Invite</a></p>
            <p>This link expires in 72 hours.</p>`,
     };
@@ -177,9 +183,9 @@ class EmailService {
 
 // ── Main dispatcher ────────────────────────────────────────────────
   async send({to, type, payload}) {
-    const { subject, html } = this.renderTemplate(type, payload ) ;
+    const { subject, html, from } = this.renderTemplate(type, payload ) ;
     console.log(subject,html)
-    await sendEmail({to, subject, body: html,});
+    await sendEmail({to, subject, body: html,from});
   }
   renderTemplate(type, payload ) {
     const builder = this.EMAIL_TEMPLATES[type];
@@ -188,8 +194,6 @@ class EmailService {
   }
   //queue email
  async  queue({ to, type, payload ,delaySeconds = 0}) {
-  console.log(`Sending ${type} email to ${to} with URL ${payload.inviteUrl}`);
-  console.log('TRACE: EmailService.queue called.', to, type, payload ,delaySeconds);
   const boss = await initializeAndStartBoss(); 
   if (!boss) {
     console.error("Attempted to queue email, but PgBoss failed to start or is not started after initializeAndStartBoss. Critical error.");
@@ -201,7 +205,7 @@ class EmailService {
       {
         to: to,
         type: type,
-        payload: payload // This keeps generic payload dynamic (e.g., { inviteUrl: "..." } or { token: "..." })
+        payload: payload 
       },
       {startAfter:  delaySeconds > 0 ? new Date(Date.now() + delaySeconds * 1000) : undefined}
   );
