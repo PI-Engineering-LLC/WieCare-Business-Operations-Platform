@@ -1,4 +1,5 @@
 console.log('TRACE: services/email.service.js loaded.');
+require('dotenv').config();
 const { sendEmail } = require('../mailer'); 
 const { initializeAndStartBoss, getBossInstance }  = require('../jobs/boss');
 
@@ -70,7 +71,7 @@ class EmailService {
             </table>
             ${quote.valid_until ? `<p style="font-size:13px;color:#718096">This quote is valid until <strong>${quote.valid_until}</strong>.</p>` : ''}
             ${quote.notes ? `<p style="font-size:13px;color:#718096"><strong>Notes:</strong> ${quote.notes}</p>` : ''}
-            <p>Please log in to your portal to review and approve or request changes.</p>
+            <p>Please <a href='${process.env.FRONTEND_URL}'>log in</a> to your portal to review and approve or request changes.</p>
             <p style="margin-top:24px;color:#718096;font-size:13px">— ${quote.sending_entity || 'Wiegand'}</p>
           </div>
         </div>
