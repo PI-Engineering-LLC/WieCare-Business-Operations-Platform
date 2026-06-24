@@ -13,11 +13,9 @@ const auditMiddleware = require('../middleware/auditMiddleware');
 
 
 router.get('/', requireAuth, loadContext, resolveClientContext, 
-//   permit(
-//   'warranty.view_all',
-//   'warranty.view_tenant',
-//   'warranty.view_own'
-// ),
+  permit(
+  'warranty:view',
+),
 asyncHandler(async (req, res) => {
   let q = db('warranty_claims').orderBy('created_at', 'desc');
   q = clientScope(q, req);
@@ -40,6 +38,9 @@ asyncHandler(async (req, res) => {
 // });
 
 router.post('/', requireAuth, loadContext, resolveClientContext,
+  permit(
+    'warranty:view',
+  ),
   auditMiddleware({action: 'warranty.created', resourceType:'warranty'}),
   asyncHandler( async (req, res) => {
   const client = await db('clients').where({ id: req.clientId }).first();
