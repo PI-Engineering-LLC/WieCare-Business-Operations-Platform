@@ -71,7 +71,13 @@ router.post('/mark-all-read', requireAuth, loadContext, resolveClientContext,
   await db('notifications').where({ recipient_id: req.user.id, is_read: false }).update({ is_read: true, updated_at: db.fn.now() });
   res.json({ success: true });
 }));
-
+// DELETE /api/notifications/clear-read
+router.delete('/clear-read', requireAuth, loadContext, resolveClientContext,
+  auditMiddleware({action: 'notification.cleared_read', resourceType:'notification'}),
+  asyncHandler( async (req, res) => {
+  await db('notifications').where({ recipient_id: req.user.id, is_read: true }).delete();
+  res.json({ success: true });
+}));
 // DELETE /api/notifications/:id
 router.delete('/:id', requireAuth, loadContext, resolveClientContext,
   auditMiddleware({action: 'notification.deleted', resourceType:'notification'}),
@@ -90,13 +96,7 @@ router.delete('/:id', requireAuth, loadContext, resolveClientContext,
   res.json({ success: true });
 }));
 
-// DELETE /api/notifications/clear-read
-router.delete('/clear-read', requireAuth, loadContext, resolveClientContext,
-  auditMiddleware({action: 'notification.cleared_read', resourceType:'notification'}),
-  asyncHandler( async (req, res) => {
-  await db('notifications').where({ recipient_id: req.user.id, is_read: true }).delete();
-  res.json({ success: true });
-}));
+
 
 // POST /api/notifications (admin — send to specific user)
 router.post('/', requireAuth, loadContext, adminOnly,
