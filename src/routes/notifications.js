@@ -76,8 +76,17 @@ router.post('/mark-all-read', requireAuth, loadContext, resolveClientContext,
 router.delete('/:id', requireAuth, loadContext, resolveClientContext,
   auditMiddleware({action: 'notification.deleted', resourceType:'notification'}),
   asyncHandler( async (req, res) => {
-  const deletedCount = await db('notifications').where({ id: req.params.id, recipient_id: req.user.id }).delete();
+    if (req.user.isInternalAdmin){
+      const deletedCount = await db('notifications').where({ id: req.params.id}).delete();
   if (deletedCount === 0) return res.status(404).json({ error: 'Notification not found or not authorized' });
+  
+
+    }else{
+      const deletedCount = await db('notifications').where({ id: req.params.id, recipient_id: req.user.id }).delete();
+  if (deletedCount === 0) return res.status(404).json({ error: 'Notification not found or not authorized' });
+  
+
+    }
   res.json({ success: true });
 }));
 
