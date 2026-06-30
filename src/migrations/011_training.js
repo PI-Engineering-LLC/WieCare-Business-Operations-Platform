@@ -3,6 +3,7 @@ exports.up = async (knex) => {
       t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.string('title').notNullable();
       t.text('description');
+      t.uuid('client_id').notNullable().references('id').inTable('clients').onDelete('CASCADE');;
       t.string('coaster_name');
       t.string('category').defaultTo('operations');
       t.string('instructor');

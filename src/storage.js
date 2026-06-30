@@ -212,4 +212,4 @@ const uploadMiddleware = multer({
   }
 });
 
-module.exports = { upload, s3Client, getSignedUrl, deleteFile, uploadFile, uploadMiddleware };
+module.exports = { upload, s3Client, getSignedUrl, deleteFile, uploadFile };

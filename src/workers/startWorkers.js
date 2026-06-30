@@ -1,5 +1,6 @@
 const { initializeAndStartBoss, getBossInstance } = require('../jobs/boss');
 const sendEmailWorker = require('./sendEmailWorker');
+const {processCsvImport} = require('./csvImportWorker');
 const { runTrainingReminders } = require('../jobs/trainingReminder');
 const { runInspectionReminders } = require('../jobs/inspectionReminder');
 const { runOverDueClientsHold, runInvoiceReminders, runInvoiceOverDue } =
@@ -15,6 +16,10 @@ async function startWorkers() {
   await boss.createQueue('send-email');
   await boss.work('send-email', sendEmailWorker);
   console.log('Email worker registered.');
+
+  await boss.createQueue('import-csv');
+  await boss.work('import-csv', processCsvImport);
+  console.log('Import Csv worker registered.');
 
   await boss.createQueue('monthly-training-reminder-job');
   await boss.work('monthly-training-reminder-job', async (job) => {

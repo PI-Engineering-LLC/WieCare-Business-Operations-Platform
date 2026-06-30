@@ -14,7 +14,12 @@ const app = express();
 app.use(helmet());
 app.use(cors({ origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:5173', 
   credentials: true,methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
   allowedHeaders: ['Content-Type', 'Authorization','x-tenant-id'] }));
+// app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true,
+//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+//   allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-Id']
+//   }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1kb'}));
 app.use(cookieParser())
@@ -22,9 +27,9 @@ app.enable('trust proxy');
 
 // ─── Rate Limiting ───
 // Apply specific authLimiter to /api/auth routes
-// app.use('/api/auth', authLimiter);
+app.use('/api/auth', authLimiter);
 // Apply general apiLimiter to all /api routes (this will apply to all /api routes *except* those already handled by /api/auth)
-// app.use('/api', apiLimiter);
+app.use('/api', apiLimiter);
 
 // ─── Auth ───
 app.use(passport.initialize()); // no sessions — we use JWT

@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { s3Client, getSignedUrl, deleteFile, uploadMiddleware } = require('../storage');
+const { s3Client, getSignedUrl, deleteFile } = require('../storage');
 const requireAuth = require('../middleware/auth');
 const loadContext = require('../middleware/loadContext');
 const clientContext = require('../middleware/clientContext');
@@ -8,6 +8,7 @@ const adminOnly = require('../middleware/adminOnly');
 const clientScope = require('../middleware/clientScope');
 const asyncHandler = require('../middleware/asyncHandler');
 const auditMiddleware = require('../middleware/auditMiddleware');
+const {uploadMiddleware} = require('../middleware/uploadMiddleWare');
 
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl: getSignedUrlForUpload  } = require('@aws-sdk/s3-request-presigner');
