@@ -13,6 +13,8 @@ const auditMiddleware = require('../middleware/auditMiddleware');
 router.get('/', requireAuth,loadContext,resolveClientContext,
   asyncHandler( async (req, res) => {
   let q = db('training_sessions').orderBy('session_date');
+  if (req.query.client_id) q = q.where({ client_id: req.query.client_id });
+    q = clientScope(q, req);
   if (req.query.status) q = q.where({ status: req.query.status });
   if (req.query.coaster_name) q = q.where({ coaster_name: req.query.coaster_name });
   let result;

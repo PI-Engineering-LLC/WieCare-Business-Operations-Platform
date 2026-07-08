@@ -14,6 +14,7 @@ exports.up = (knex) => knex.schema.createTable('clients', (t) => {
     t.string('customer_id');
     t.string('logo_url');
     t.string('subscription_tier').defaultTo('basic');
+    t.integer('invite_limit').notNullable().defaultTo(5);
     t.string('status').defaultTo('active');
     t.boolean('on_hold').defaultTo(false);
     t.date('contract_date');

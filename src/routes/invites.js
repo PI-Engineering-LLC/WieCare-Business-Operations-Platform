@@ -5,13 +5,40 @@ const resolveAuthContext = require('../middleware/resolveAuthContext');
 const audit = require('../services/audit');
 const asyncHandler = require('../middleware/asyncHandler');
 const inviteService = require('../services/invite');
+const requireRoles = require('../middleware/roles');
 
 
 // POST /api/invites
-router.post('/', requireAuth, loadContext, resolveAuthContext,
+router.post('/', requireAuth, loadContext, resolveAuthContext, requireRoles(['client_admin', 'super_admin', 'platform_admin']),
   asyncHandler(async (req, res) => {
     const { email, role_ids, inviteType, platformRole, authProvider = 'any', invited_by_message } = req.body;
     const clientId = req.clientId;
+
+    const client = await db('clients').where({ id: clientId }).first();
+    const limit = client.invite_limit || 5
+
+    // Total users (already accepted members)
+    const userCount = await db('users')
+      .where({ client_id: clientId })
+      .count('id as count')
+      .first();
+
+    // Active, unaccepted, unexpired invites
+    const pendingCount = await db('invites')
+      .where({ client_id: clientId })
+      .whereNull('accepted_at')              // Has not been accepted yet
+      .where('expires_at', '>', new Date()) // Is not expired (and not revoked)
+      .count('id as count')
+      .first();
+
+    const totalUsage = parseInt(userCount.count) + parseInt(pendingCount.count);
+
+    // Enforce the limit
+    if (totalUsage > limit) {
+      return res.status(403).json({
+        error: "Invite limit reached. Please contact support to increase your limit."
+      });
+    }
 
     const invite = await inviteService.createInvite({
       email,
@@ -29,7 +56,7 @@ router.post('/', requireAuth, loadContext, resolveAuthContext,
   }));
 
 // GET /api/invites
-router.get('/', requireAuth, loadContext, resolveAuthContext,
+router.get('/', requireAuth, loadContext, resolveAuthContext, requireRoles(['client_admin', 'super_admin', 'platform_admin']),
   asyncHandler(async (req, res) => {
     const { client_id, page = 1, limit = 50 } = req.query;
     const offset = (page - 1) * limit;
@@ -40,11 +67,51 @@ router.get('/', requireAuth, loadContext, resolveAuthContext,
       .select('i.*', 't.company_name as client_name', 'u.full_name as invited_by_name');
 
     if (client_id) query.where('i.client_id', client_id);
+    if (req.clientId) query.where('i.client_id', req.clientId);
 
     const [{ count }] = await query.clone().count('i.id as count');
     const invites = await query.orderBy('i.created_at', 'desc').limit(limit).offset(offset);
 
     res.json({ invites, total: parseInt(count) });
+  }));
+
+// GET /api/invites/status
+router.get('/status', requireAuth, loadContext, resolveAuthContext,
+  asyncHandler(async (req, res) => {
+    const { client_id } = req.query;
+    const clientId = req.clientId || client_id;
+    const client = await db('clients')
+      .where({ id: clientId })
+      .select('invite_limit')
+      .first();
+
+    if (!client) {
+      return res.status(404).json({ error: 'Client not found' });
+    }
+    // const userResult = await db('users')
+    // .where({ client_id: clientId })
+    // .count('id as count')
+    // .first();
+
+    // const inviteResult = await db('invites')
+    // .where({ client_id: clientId })
+    // .whereNull('accepted_at') 
+    // .where('expires_at', '>', new Date())
+    // .count('id as count')
+    // .first();
+    const [userResult, inviteResult] = await Promise.all([
+      db('users').where({ client_id: clientId }).count('id as count').first(),
+      db('invites').where({ client_id: clientId }).whereNull('accepted_at').where('expires_at', '>', new Date()).count('id as count').first()
+    ]);
+    const currentUsage = parseInt(userResult.count) + parseInt(inviteResult.count);
+    const limit = client.invite_limit || 5;
+
+    res.status(200).json({
+      currentUsage,
+      limit,
+      remaining: Math.max(0, limit - currentUsage),
+      isAtLimit: currentUsage >= limit
+    });
   }));
 
 // GET /api/invites/:id
