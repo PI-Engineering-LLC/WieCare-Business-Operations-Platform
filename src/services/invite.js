@@ -50,9 +50,13 @@ class InviteService {
             let inviterOrg;
             let inviterOrgName;
             let inviterOrgCoaster;
-            inviterOrg = await trx('clients')
+            if(clientId){
+                inviterOrg = await trx('clients')
                 .where({ id: clientId })
                 .first();
+
+            }
+            
 
             const inviteUrl = `${process.env.FRONTEND_URL}/accept-invite/${invite_token}`;
             const inviterName = inviter?.full_name
