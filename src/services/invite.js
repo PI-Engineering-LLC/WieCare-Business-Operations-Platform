@@ -158,17 +158,42 @@ class InviteService {
             token_selector: selector,
             invite_token: tokenHash, invite_expires_at, updated_at: new Date()
         })
+        const inviter = await trx('users')
+        .where({ id: invite.invitedBy, deleted_at: null })
+        .first(); 
+        let inviterOrg;  
+        let inviterOrgName;
+        let inviterOrgCoaster;
+        inviterOrg = await trx('clients')
+        .where({ id: invite.client_id })
+        .first();
 
-        const inviteUrl = `${process.env.FRONTEND_URL}/accept-invite/${invite_token}`;
-        await emailService.queue({ to: invite.email, type: 'invite', payload: { inviteUrl, inviteType: invite.invite_type } });
+    const inviteUrl = `${process.env.FRONTEND_URL}/accept-invite/${invite_token}`;
+    const inviterName = inviter?.full_name
+    if(inviterOrg){
+        inviterOrgName = inviterOrg?.company_name
+        inviterOrgCoaster = inviterOrg?.coaster_name
+    }
+    
+
+    await emailService.queue({ to: invite.email, type: 'invite', payload: { inviteUrl, inviterName, inviterOrgName, inviterOrgCoaster, inviteType: invite.invite_type } });
+    
+
+        // const inviteUrl = `${process.env.FRONTEND_URL}/accept-invite/${invite_token}`;
+        // await emailService.queue({ to: invite.email, type: 'invite', payload: { inviteUrl, inviteType: invite.invite_type } });
         return { id: invite.id, email: invite.email, inviteUrl, invite_expires_at };
 
 
     }
 
     async revokeInvite(inviteId) {
-        await db('invites').where({ id: inviteId }).update({ invite_expires_at: new Date() });
-        return { success: true };
+        const invite = await db('invites').where({ id: inviteId }).first();
+        if (!invite) return res.status(404).json({ error: 'Invite not found' });
+        if (invite.accepted_at) { throw new Error('Invite already accepted'); }
+        await db('invites').where({ id: invite.id  }).update({ invite_expires_at: new Date() });
+        // await db('invites').where({ id: inviteId }).update({ invite_expires_at: new Date() });
+        return { id: invite.id, email: invite.email };
+
     }
 }
 

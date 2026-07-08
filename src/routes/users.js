@@ -223,15 +223,16 @@ router.put('/:id/clients/:clientId/roles',
   auditMiddleware({action: 'user.roles_updated_in_client', resourceType:'user'}),
   asyncHandler(async (req, res) => {
     const { memberships } = req.body;
-
-// Access the roleIds from the first membership object
+    //if (memberships && Array.isArray(memberships) && memberships.length > 0) {
+    // Access the roleIds from the first membership object
     const roleIds = memberships[0].roleIds;
+    // const allRoleIds = memberships.map(m => m.roleIds);
+    // flat array of all IDs found across all memberships:
+    // const flattenedRoleIds = memberships.flatMap(m => m.roleIds)
     const status = memberships[0].status;
     const { id: user_id, clientId: client_id } = req.params;
 
     const [updatedUser] = await db('users').where({ id: user_id }).update({ status, updated_at: new Date() }).returning('*');
-
-
     const membership = await db('client_memberships')
       .where({ user_id, client_id })
       .first();

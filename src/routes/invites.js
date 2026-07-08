@@ -140,7 +140,8 @@ router.post('/:id/resend', requireAuth, loadContext, resolveClientContext,
 // POST /api/invites/:id/revoke
 router.post('/:id/revoke', requireAuth, loadContext, resolveClientContext,
   asyncHandler(async (req, res) => {
-    await inviteService.revokeInvite(req.params.id);
-    return { success: true };
+    const invite = await inviteService.revokeInvite(req.params.id);
+    await audit({ actorUserId: req.user.id, clientId: req.clientId, action: 'invite.resent', resourceType: 'invite', resourceId: invite.id, metadata: { email: invite.email }, req });
+    res.json({ message: 'Invite revoked' });
   }));
 module.exports = router;
