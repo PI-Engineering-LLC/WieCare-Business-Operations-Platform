@@ -14,35 +14,36 @@ router.post('/', requireAuth, loadContext, resolveAuthContext, requireRoles(['cl
   asyncHandler(async (req, res) => {
     const { email, role_ids, inviteType, platformRole, authProvider = 'any', invited_by_message } = req.body;
     const clientId = req.clientId;
+    if (clientId) {
+      const client = await db('clients').where({ id: clientId }).first();
+      if (client) {
+        const limit = client.invite_limit || 5
 
-    const client = await db('clients').where({ id: clientId }).first();
-    if (client) {
-      const limit = client.invite_limit || 5
+        const userResult = await db('users')
+          .join('client_memberships as cm', 'cm.user_id', 'users.id')
+          .join('clients as c', 'c.id', 'cm.client_id')
+          .where('cm.client_id', clientId)
+          .count('users.id as count')
+          .first();
 
-      const userResult = await db('users')
-        .join('client_memberships as cm', 'cm.user_id', 'users.id')
-        .join('clients as c', 'c.id', 'cm.client_id')
-        .where('cm.client_id', clientId)
-        .count('users.id as count')
-        .first();
+        const userCount = parseInt(userResult.count);
 
-      const userCount = parseInt(userResult.count);
+        // Active, unaccepted, unexpired invites
+        const pendingCount = await db('invites')
+          .where({ client_id: clientId })
+          .whereNull('accepted_at')              // Has not been accepted yet
+          .where('invite_expires_at', '>', new Date()) // Is not expired (and not revoked)
+          .count('id as count')
+          .first();
 
-      // Active, unaccepted, unexpired invites
-      const pendingCount = await db('invites')
-        .where({ client_id: clientId })
-        .whereNull('accepted_at')              // Has not been accepted yet
-        .where('invite_expires_at', '>', new Date()) // Is not expired (and not revoked)
-        .count('id as count')
-        .first();
+        const totalUsage = parseInt(userCount) + parseInt(pendingCount.count);
 
-      const totalUsage = parseInt(userCount) + parseInt(pendingCount.count);
-
-      // Enforce the limit
-      if (totalUsage > limit) {
-        return res.status(403).json({
-          error: "Invite limit reached. Please contact support to increase your limit."
-        });
+        // Enforce the limit
+        if (totalUsage > limit) {
+          return res.status(403).json({
+            error: "Invite limit reached. Please contact support to increase your limit."
+          });
+        }
       }
     }
 
