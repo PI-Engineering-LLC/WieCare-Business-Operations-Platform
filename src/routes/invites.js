@@ -14,8 +14,9 @@ router.post('/', requireAuth, loadContext, resolveAuthContext, requireRoles(['cl
   asyncHandler(async (req, res) => {
     const { email, role_ids, inviteType, platformRole, authProvider = 'any', invited_by_message } = req.body;
     const clientId = req.clientId;
-
+    
     const client = await db('clients').where({ id: clientId }).first();
+    console.log("###", clientId, client)
     if(client){
     const limit = client.invite_limit || 5
 
@@ -45,6 +46,7 @@ const userCount = parseInt(userResult.count);
       .first();
 
     const totalUsage = parseInt(userCount.count) + parseInt(pendingCount.count);
+    console.log("###2", userResult, userCount,pendingCount,totalUsage, limit)
 
     // Enforce the limit
     if (totalUsage > limit) {
