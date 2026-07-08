@@ -4,7 +4,7 @@ const db = require('../db');
 const emailService = require('./email.service');
 
 class InviteService {
-    async createInvite({ email, inviteType, clientId, role_ids, platformRole, authProvider = 'any', invitedBy }) { 
+    async createInvite({ email, inviteType, clientId, role_ids, platformRole, authProvider = 'any', invitedBy }) {
         return await db.transaction(async trx => {
             const normalizedEmail = email.trim().toLowerCase();
             const existingUser = await trx('users')
@@ -20,7 +20,7 @@ class InviteService {
             const selector = crypto.randomBytes(8).toString('hex');
             const verifier = crypto.randomBytes(32).toString('hex');
             const invite_token = `${selector}.${verifier}`;
-            const tokenHash = await bcrypt.hash(verifier, 12); 
+            const tokenHash = await bcrypt.hash(verifier, 12);
 
             const invite_expires_at = new Date(Date.now() + 72 * 60 * 60 * 1000);
 
@@ -38,24 +38,29 @@ class InviteService {
                     invite_expires_at,
                 })
                 .returning('*');
+            let inviter;
 
-                const inviter = await trx('users')
-                .where({ id: invitedBy, deleted_at: null })
-                .first(); 
-                let inviterOrg;  
-                let inviterOrgName;
-                let inviterOrgCoaster;
-                inviterOrg = await trx('clients')
+            if (invitedBy) {
+                inviter = await trx('users')
+                    .where({ id: invitedBy, deleted_at: null })
+                    .first();
+
+            }
+
+            let inviterOrg;
+            let inviterOrgName;
+            let inviterOrgCoaster;
+            inviterOrg = await trx('clients')
                 .where({ id: clientId })
                 .first();
 
             const inviteUrl = `${process.env.FRONTEND_URL}/accept-invite/${invite_token}`;
             const inviterName = inviter?.full_name
-            if(inviterOrg){
+            if (inviterOrg) {
                 inviterOrgName = inviterOrg?.company_name
                 inviterOrgCoaster = inviterOrg?.coaster_name
             }
-            
+
 
             await emailService.queue({ to: normalizedEmail, type: 'invite', payload: { inviteUrl, inviterName, inviterOrgName, inviterOrgCoaster, inviteType } });
             return { id: invite.id, email: normalizedEmail, inviteUrl, invite_expires_at };
@@ -71,7 +76,7 @@ class InviteService {
 
         const invite = await db('invites')
             .where({ token_selector: selector })
-            .first(); 
+            .first();
 
         if (!invite) { throw new Error('Invite not found'); }
         if (invite.accepted_at) { throw new Error('Invite already accepted'); }
@@ -79,7 +84,7 @@ class InviteService {
         if (new Date(invite.invite_expires_at) < new Date()) {
             throw new Error('Invite expired');
         }
-        const valid = await bcrypt.compare(verifier, invite.invite_token) 
+        const valid = await bcrypt.compare(verifier, invite.invite_token)
         if (!valid) { throw new Error('Invalid invite token'); }
 
         // If we need role names or client names,  fetch them based on invite.role_ids and invite.client_id
@@ -93,21 +98,21 @@ class InviteService {
             const roles = await db('roles').whereIn('id', invite.role_ids).select('id', 'name');
             fullInvite.role_names = roles.map(r => r.name);
         }
-        return fullInvite; 
+        return fullInvite;
     }
 
     async acceptInvite({ token, password, googleProfile, name }) {
         return await db.transaction(async trx => {
-            const invite = await this.validateInviteToken(token); 
+            const invite = await this.validateInviteToken(token);
             let user;
 
             const existingUser = await trx('users').where({ email: invite.email, deleted_at: null }).first();
 
             if (existingUser) {
-                user = existingUser; 
+                user = existingUser;
                 await trx('users').where({ id: user.id }).update({
                     google_id: googleProfile?.id || null,
-                    platform_role: invite.platform_role, 
+                    platform_role: invite.platform_role,
                 });
             } else {
                 // Create new user
@@ -123,7 +128,7 @@ class InviteService {
             }
 
             // Create client membership and assign roles
-            if (invite.client_id && user) { 
+            if (invite.client_id && user) {
                 const [membership] = await trx('client_memberships').insert({
                     user_id: user.id,
                     client_id: invite.client_id,
@@ -159,25 +164,25 @@ class InviteService {
             invite_token: tokenHash, invite_expires_at, updated_at: new Date()
         })
         const inviter = await db('users')
-        .where({ id: invite.invitedBy, deleted_at: null })
-        .first(); 
-        let inviterOrg;  
+            .where({ id: invite.invited_by, deleted_at: null })
+            .first();
+        let inviterOrg;
         let inviterOrgName;
         let inviterOrgCoaster;
         inviterOrg = await db('clients')
-        .where({ id: invite.client_id })
-        .first();
+            .where({ id: invite.client_id })
+            .first();
 
-    const inviteUrl = `${process.env.FRONTEND_URL}/accept-invite/${invite_token}`;
-    const inviterName = inviter?.full_name
-    if(inviterOrg){
-        inviterOrgName = inviterOrg?.company_name
-        inviterOrgCoaster = inviterOrg?.coaster_name
-    }
-    
+        const inviteUrl = `${process.env.FRONTEND_URL}/accept-invite/${invite_token}`;
+        const inviterName = inviter?.full_name
+        if (inviterOrg) {
+            inviterOrgName = inviterOrg?.company_name
+            inviterOrgCoaster = inviterOrg?.coaster_name
+        }
 
-    await emailService.queue({ to: invite.email, type: 'invite', payload: { inviteUrl, inviterName, inviterOrgName, inviterOrgCoaster, inviteType: invite.invite_type } });
-    
+
+        await emailService.queue({ to: invite.email, type: 'invite', payload: { inviteUrl, inviterName, inviterOrgName, inviterOrgCoaster, inviteType: invite.invite_type } });
+
 
         // const inviteUrl = `${process.env.FRONTEND_URL}/accept-invite/${invite_token}`;
         // await emailService.queue({ to: invite.email, type: 'invite', payload: { inviteUrl, inviteType: invite.invite_type } });
@@ -190,7 +195,7 @@ class InviteService {
         const invite = await db('invites').where({ id: inviteId }).first();
         if (!invite) return res.status(404).json({ error: 'Invite not found' });
         if (invite.accepted_at) { throw new Error('Invite already accepted'); }
-        await db('invites').where({ id: invite.id  }).update({ invite_expires_at: new Date() });
+        await db('invites').where({ id: invite.id }).update({ invite_expires_at: new Date() });
         // await db('invites').where({ id: inviteId }).update({ invite_expires_at: new Date() });
         return { id: invite.id, email: invite.email };
 
