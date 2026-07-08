@@ -58,8 +58,10 @@ router.post('/', requireAuth, loadContext, resolveAuthContext, requireRoles(['cl
 // GET /api/invites
 router.get('/', requireAuth, loadContext, resolveAuthContext, requireRoles(['client_admin', 'super_admin', 'platform_admin']),
   asyncHandler(async (req, res) => {
+    console.log("#############TRACE")
     const { client_id, page = 1, limit = 50 } = req.query;
     const offset = (page - 1) * limit;
+    console.log("#############TRACE",  client_id,page,limit, offset)
 
     let query = db('invites as i')
       .join('clients as t', 't.id', 'i.client_id')
