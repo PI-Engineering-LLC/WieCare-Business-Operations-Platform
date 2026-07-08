@@ -23,7 +23,8 @@ app.use(cors({ origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localh
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1kb'}));
 app.use(cookieParser())
-app.enable('trust proxy'); 
+// app.enable('trust proxy'); 
+app.set('trust proxy', 1);
 
 // ─── Rate Limiting ───
 // Apply specific authLimiter to /api/auth routes

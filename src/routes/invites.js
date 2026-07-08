@@ -63,8 +63,8 @@ router.get('/', requireAuth, loadContext, resolveClientContext, requireRoles(['c
     const offset = (page - 1) * limit;
 
     let query = db('invites as i')
-      .join('clients as t', 't.id', 'i.client_id')
-      .join('users as u', 'u.id', 'i.invited_by')
+      .leftJoin('clients as t', 't.id', 'i.client_id')
+      .leftJoin('users as u', 'u.id', 'i.invited_by')
       .select('i.*', 't.company_name as client_name', 'u.full_name as invited_by_name');
 
     if (client_id) query.where('i.client_id', client_id);
