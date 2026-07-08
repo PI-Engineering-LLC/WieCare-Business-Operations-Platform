@@ -143,7 +143,7 @@ class EmailService {
 
    buildInvitationEmail({ inviteUrl, inviterName, inviterOrgName, inviterOrgCoaster}) {
     return {
-      from: `${inviterOrgName} via Wiegand` ,
+      from: inviterOrgName? `${inviterOrgName} via Wiegand` : null ,
       subject: 'You\'ve been invited to Wiegand USA Customer Portal',
       html: `<p>Hello!</p>
 <p>
