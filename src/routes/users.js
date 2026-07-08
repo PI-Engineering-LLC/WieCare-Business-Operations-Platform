@@ -252,7 +252,7 @@ router.delete('/:id/clients/:clientId',
   requireAuth,
   loadContext,
   resolveClientContext,
-  equireRoles(['client_admin', 'super_admin', 'platform_admin']),
+  requireRoles(['client_admin', 'super_admin', 'platform_admin']),
   auditMiddleware({action: 'user.removed_from_client', resourceType:'user'}),
   asyncHandler(async (req, res) => {
     const { id: user_id, clientId: client_id } = req.params;
