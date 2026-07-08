@@ -251,7 +251,7 @@ router.put('/:id/clients/:clientId/roles',
     permissionCache.del(`user_client_permissions:${user_id}`);
     console.log(`Invalidated permission cache for user ${user_id} due to role update in client ${client_id}`);
 
-    res.json({ message: 'User roles updated in client.', membership_id: membership.id, role_ids: roleIds });
+    res.json({ message: 'User roles updated in client.', membership_id: membership.id, role_ids: roleIds, status });
 }));
 
 // DELETE /api/users/:id/clients/:clientId (Remove user from client)
