@@ -158,13 +158,13 @@ class InviteService {
             token_selector: selector,
             invite_token: tokenHash, invite_expires_at, updated_at: new Date()
         })
-        const inviter = await trx('users')
+        const inviter = await db('users')
         .where({ id: invite.invitedBy, deleted_at: null })
         .first(); 
         let inviterOrg;  
         let inviterOrgName;
         let inviterOrgCoaster;
-        inviterOrg = await trx('clients')
+        inviterOrg = await db('clients')
         .where({ id: invite.client_id })
         .first();
 
