@@ -45,8 +45,8 @@ const userCount = parseInt(userResult.count);
       .count('id as count')
       .first();
 
-    const totalUsage = parseInt(userCount.count) + parseInt(pendingCount.count);
-    console.log("###2", userResult, userCount,pendingCount,totalUsage, limit)
+    const totalUsage = parseInt(userCount) + parseInt(pendingCount.count);
+    console.log("###2", userResult, userCount,pendingCount,totalUsage, limit, parseInt(pendingCount.count),parseInt(userCount.count),pendingCount.count,parseInt(userCount))
 
     // Enforce the limit
     if (totalUsage > limit) {
