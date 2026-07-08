@@ -70,10 +70,11 @@ router.get('/', requireAuth, loadContext, resolveClientContext, requireRoles(['c
     if (client_id) query.where('i.client_id', client_id);
     if (req.clientId) query.where('i.client_id', req.clientId);
 
-    const [{ count }] = await query.clone().count('i.id as count');
+    // const [{ count }] = await query.clone().count('i.id as count');
     const invites = await query.orderBy('i.created_at', 'desc').limit(limit).offset(offset);
 
-    res.json({ invites, total: parseInt(count) });
+    // res.json({ invites, total: parseInt(count) });
+    res.json({ invites });
   }));
 
 // GET /api/invites/status
