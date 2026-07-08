@@ -218,7 +218,8 @@ router.post('/:id/clients/:clientId',
 router.put('/:id/clients/:clientId/roles',
   requireAuth,
   loadContext,
-  adminOnly,
+  resolveClientContext,
+  requireRoles(['client_admin', 'super_admin', 'platform_admin']),
   auditMiddleware({action: 'user.roles_updated_in_client', resourceType:'user'}),
   asyncHandler(async (req, res) => {
     const { roleIds = [] } = req.body;
@@ -250,7 +251,8 @@ router.put('/:id/clients/:clientId/roles',
 router.delete('/:id/clients/:clientId',
   requireAuth,
   loadContext,
-  adminOnly,
+  resolveClientContext,
+  equireRoles(['client_admin', 'super_admin', 'platform_admin']),
   auditMiddleware({action: 'user.removed_from_client', resourceType:'user'}),
   asyncHandler(async (req, res) => {
     const { id: user_id, clientId: client_id } = req.params;
