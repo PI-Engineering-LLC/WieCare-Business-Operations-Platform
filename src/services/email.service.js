@@ -147,7 +147,7 @@ class EmailService {
       subject: 'You\'ve been invited to Wiegand USA Customer Portal',
       html: `<p>Hello!</p>
 <p>
-  <strong>${inviterName}</strong> has invited you to join 
+  <strong>${inviterName || 'Wiegand'}</strong> has invited you to join 
   <strong>${inviterOrgName || 'Wiegand USA Customer Portal'}</strong> on our platform.
 </p>
       <p>Click the link below to set your password and access your account:</p>
