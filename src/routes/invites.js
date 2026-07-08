@@ -40,7 +40,7 @@ const userCount = parseInt(userResult.count);
     const pendingCount = await db('invites')
       .where({ client_id: clientId })
       .whereNull('accepted_at')              // Has not been accepted yet
-      .where('expires_at', '>', new Date()) // Is not expired (and not revoked)
+      .where('invite_expires_at', '>', new Date()) // Is not expired (and not revoked)
       .count('id as count')
       .first();
 
