@@ -6,7 +6,7 @@ const audit = require('../services/audit');
 const asyncHandler = require('../middleware/asyncHandler');
 const inviteService = require('../services/invite');
 const requireRoles = require('../middleware/roles');
-
+const resolveClientContext = require('../middleware/resolveClientContext');
 
 // POST /api/invites
 router.post('/', requireAuth, loadContext, resolveAuthContext, requireRoles(['client_admin', 'super_admin', 'platform_admin']),
@@ -56,12 +56,10 @@ router.post('/', requireAuth, loadContext, resolveAuthContext, requireRoles(['cl
   }));
 
 // GET /api/invites
-router.get('/', requireAuth, loadContext, resolveAuthContext, requireRoles(['client_admin', 'super_admin', 'platform_admin']),
+router.get('/', requireAuth, loadContext, resolveClientContext, requireRoles(['client_admin', 'super_admin', 'platform_admin']),
   asyncHandler(async (req, res) => {
-    console.log("#############TRACE")
     const { client_id, page = 1, limit = 50 } = req.query;
     const offset = (page - 1) * limit;
-    console.log("#############TRACE",  client_id,page,limit, offset)
 
     let query = db('invites as i')
       .join('clients as t', 't.id', 'i.client_id')
@@ -78,7 +76,7 @@ router.get('/', requireAuth, loadContext, resolveAuthContext, requireRoles(['cli
   }));
 
 // GET /api/invites/status
-router.get('/status', requireAuth, loadContext, resolveAuthContext,
+router.get('/status', requireAuth, loadContext, resolveClientContext,
   asyncHandler(async (req, res) => {
     const { client_id } = req.query;
     const clientId = req.clientId || client_id;
@@ -117,7 +115,7 @@ router.get('/status', requireAuth, loadContext, resolveAuthContext,
   }));
 
 // GET /api/invites/:id
-router.get('/:id', requireAuth, loadContext, resolveAuthContext,
+router.get('/:id', requireAuth, loadContext, resolveClientContext,
   asyncHandler(async (req, res) => {
     const invite = await db('invites as i')
       .join('clients as t', 't.id', 'i.client_id')
@@ -130,7 +128,7 @@ router.get('/:id', requireAuth, loadContext, resolveAuthContext,
   }));
 
 // POST /api/invites/:id/resend
-router.post('/:id/resend', requireAuth, loadContext, resolveAuthContext,
+router.post('/:id/resend', requireAuth, loadContext, resolveClientContext,
   asyncHandler(async (req, res) => {
     const invite = await inviteService.resendInvite(req.params.id);
     await audit({ actorUserId: req.user.id, clientId: req.clientId, action: 'invite.resent', resourceType: 'invite', resourceId: invite.id, metadata: { email: invite.email }, req });
@@ -138,7 +136,7 @@ router.post('/:id/resend', requireAuth, loadContext, resolveAuthContext,
   }));
 
 // POST /api/invites/:id/revoke
-router.post('/:id/revoke', requireAuth, loadContext, resolveAuthContext,
+router.post('/:id/revoke', requireAuth, loadContext, resolveClientContext,
   asyncHandler(async (req, res) => {
     await inviteService.revokeInvite(req.params.id);
     return { success: true };
