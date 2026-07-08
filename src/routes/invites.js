@@ -16,13 +16,25 @@ router.post('/', requireAuth, loadContext, resolveAuthContext, requireRoles(['cl
     const clientId = req.clientId;
 
     const client = await db('clients').where({ id: clientId }).first();
+    if(client){
     const limit = client.invite_limit || 5
 
     // Total users (already accepted members)
-    const userCount = await db('users')
-      .where({ client_id: clientId })
-      .count('id as count')
-      .first();
+    // const userCount = await db('users')
+    //   .where({ client_id: clientId })
+    //   .count('id as count')
+    //   .first();
+      const userResult = await db('users')
+  // Join the membership table to link users to clients
+  // .join('user_memberships', 'users.id', 'user_memberships.user_id')
+  .join('client_memberships as cm', 'cm.user_id', 'users.id')
+    .join('clients as c', 'c.id', 'cm.client_id')
+  // Filter by the client_id found in the membership table
+  .where('cm.client_id', clientId)
+  .count('users.id as count')
+  .first();
+
+const userCount = parseInt(userResult.count);
 
     // Active, unaccepted, unexpired invites
     const pendingCount = await db('invites')
@@ -40,6 +52,7 @@ router.post('/', requireAuth, loadContext, resolveAuthContext, requireRoles(['cl
         error: "Invite limit reached. Please contact support to increase your limit."
       });
     }
+  }
 
     const invite = await inviteService.createInvite({
       email,
