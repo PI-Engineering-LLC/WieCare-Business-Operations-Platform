@@ -95,14 +95,20 @@ router.post('/verify-mfa', asyncHandler( async (req, res)=> {
     if (!verified) {
       return res.status(401).json({ error: 'Invalid code' });
     }
-  const backupCodes = Array.from({ length: 10 }, () =>
-    crypto.randomBytes(4).toString('hex')
-  );
-  const hashedCodes = backupCodes.map(c => bcrypt.hashSync(c, 10));
+    let backupCodes = null;
+  // const backupCodes = Array.from({ length: 10 }, () =>
+  //   crypto.randomBytes(4).toString('hex')
+  // );
+  // const hashedCodes = backupCodes.map(c => bcrypt.hashSync(c, 10));
   const firstEnable = user.mfa_enabled;
 
     if (!user.mfa_enabled) {
+      const generatedBackupCodes = Array.from({ length: 10 }, () =>
+        crypto.randomBytes(4).toString('hex')
+      );
+      const hashedCodes = generatedBackupCodes.map(c => bcrypt.hashSync(c, 10));
         await db('users').where({ id: user.id }).update({ mfa_enabled: true, mfa_backup_codes: JSON.stringify(hashedCodes) });
+        backupCodes = generatedBackupCodes;
     }
     const accessToken = issueAccessToken(user);
     res.cookie("access_token", accessToken, {
@@ -111,10 +117,10 @@ router.post('/verify-mfa', asyncHandler( async (req, res)=> {
       sameSite: "none",
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
-    if(firstEnable){
-      res.json({ message: 'MFA enabled successfully. Save backup codes!', backup_codes: backupCodes, mfa_enabled: firstEnable });
+    if(!firstEnable){
+      res.json({ message: 'MFA enabled successfully. Save backup codes!', backup_codes: backupCodes, mfa_enabled: true });
     }else{
-      res.json({ message: 'MFA enabled successfully.', mfa_enabled: firstEnable });
+      res.json({ message: 'MFA enabled successfully.', mfa_enabled: true });
 
     }
 
