@@ -92,7 +92,7 @@ router.get('/:id/download', requireAuth, loadContext, resolveClientContext,
 //   res.json(doc);
 // });
 
-router.post('/', requireAuth, loadContext, requireRoles(['client_admin', 'super_admin', 'platform_admin']),
+router.post('/', requireAuth, loadContext,
   auditMiddleware({ action: 'document.created', resourceType: 'document' }),
   asyncHandler(async (req, res) => {
     const [doc] = await db('documents').insert({
