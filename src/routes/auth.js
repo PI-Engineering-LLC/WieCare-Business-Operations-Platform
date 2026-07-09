@@ -107,19 +107,20 @@ router.post('/verify-mfa', asyncHandler( async (req, res)=> {
       // console.log("$$$", user.mfa_backup_codes,storedCodes)
       let matchedIndex = -1;
       for (let i = 0; i < storedCodes.length; i++) {
-        console.log("$$$", code, storedCodes[i])
-        const match = await bcrypt.compare(code, storedCodes[i]);
+        const cleanCode = code.replace(/^\$\$\$\s*/, '').trim();
+        console.log("$$$", code, storedCodes[i], cleanCode)
+        const match = await bcrypt.compare(cleanCode, storedCodes[i]);
         if (match) { matchedIndex = i; break; }
       }
       if (matchedIndex === -1) {
         return res.status(401).json({ error: 'Invalid code' });
       }
       // 3. Consume the code — remove it from the array
-    // storedCodes.splice(matchedIndex, 1);
-    // await db('users').where({ id: user.id }).update({
-    //   mfa_backup_codes: JSON.stringify(storedCodes),
-    //   updated_at: new Date(),
-    // });
+    storedCodes.splice(matchedIndex, 1);
+    await db('users').where({ id: user.id }).update({
+      mfa_backup_codes: JSON.stringify(storedCodes),
+      updated_at: new Date(),
+    });
     const accessToken = issueAccessToken(user);
     res.cookie("access_token", accessToken, {
       httpOnly: true,
@@ -144,7 +145,7 @@ router.post('/verify-mfa', asyncHandler( async (req, res)=> {
   //   crypto.randomBytes(4).toString('hex')
   // );
   // const hashedCodes = backupCodes.map(c => bcrypt.hashSync(c, 10));
-  const firstEnable = user.mfa_enabled;
+  // const firstEnable = user.mfa_enabled;
 
     if (!user.mfa_enabled) {
       const generatedBackupCodes = Array.from({ length: 10 }, () =>
