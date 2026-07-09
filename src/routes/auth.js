@@ -138,7 +138,7 @@ router.post('/verify-mfa', asyncHandler( async (req, res)=> {
       sameSite: "none",
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
-      return res.json({ message: 'MFA enabled successfully.', mfa_enabled: true });
+      return res.json({ message: 'MFA enabled successfully.', mfa_enabled: true, remaining_codes : storedCodes.length });
       
 
     }
