@@ -92,9 +92,50 @@ router.post('/verify-mfa', asyncHandler( async (req, res)=> {
     window: 1,
     });
 
+    // if (!verified) {
+    //   return res.status(401).json({ error: 'Invalid code' });
+    // }
+
+
+    // if (isTOTP) {
+    //   return issueTokens(res, user);
+    // }
     if (!verified) {
-      return res.status(401).json({ error: 'Invalid code' });
+      // Fall back to backup code
+      const storedCodes = JSON.parse(user.mfa_backup_codes || '[]');
+      let matchedIndex = -1;
+      for (let i = 0; i < storedCodes.length; i++) {
+        const match = await bcrypt.compare(code, storedCodes[i]);
+        if (match) { matchedIndex = i; break; }
+      }
+      if (matchedIndex === -1) {
+        return res.status(401).json({ error: 'Invalid code' });
+      }
+      // 3. Consume the code — remove it from the array
+    storedCodes.splice(matchedIndex, 1);
+    await db('users').where({ id: user.id }).update({
+      mfa_backup_codes: JSON.stringify(storedCodes),
+      updated_at: new Date(),
+    });
+    const accessToken = issueAccessToken(user);
+    res.cookie("access_token", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: "none",
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+      return res.json({ message: 'MFA enabled successfully.', mfa_enabled: true });
+      
+
     }
+  
+    
+    
+  
+
+
+
+
     let backupCodes = null;
   // const backupCodes = Array.from({ length: 10 }, () =>
   //   crypto.randomBytes(4).toString('hex')
@@ -106,7 +147,10 @@ router.post('/verify-mfa', asyncHandler( async (req, res)=> {
       const generatedBackupCodes = Array.from({ length: 10 }, () =>
         crypto.randomBytes(4).toString('hex')
       );
-      const hashedCodes = generatedBackupCodes.map(c => bcrypt.hashSync(c, 10));
+      const hashedCodes = await Promise.all(
+        generatedBackupCodes.map(code => bcrypt.hash(code, 10))
+      ); 
+      // const hashedCodes = generatedBackupCodes.map(c => bcrypt.hashSync(c, 10));
         await db('users').where({ id: user.id }).update({ mfa_enabled: true, mfa_backup_codes: JSON.stringify(hashedCodes) });
         backupCodes = generatedBackupCodes;
         const accessToken = issueAccessToken(user);

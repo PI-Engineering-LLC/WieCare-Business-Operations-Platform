@@ -20,6 +20,7 @@ router.post('/', requireAuth, loadContext, resolveAuthContext, requireRoles(['cl
         const limit = client.invite_limit || 5
 
         const userResult = await db('users')
+        .whereNull('users.deleted_at')
           .join('client_memberships as cm', 'cm.user_id', 'users.id')
           .join('clients as c', 'c.id', 'cm.client_id')
           .where('cm.client_id', clientId)
