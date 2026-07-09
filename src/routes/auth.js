@@ -109,6 +109,15 @@ router.post('/verify-mfa', asyncHandler( async (req, res)=> {
       const hashedCodes = generatedBackupCodes.map(c => bcrypt.hashSync(c, 10));
         await db('users').where({ id: user.id }).update({ mfa_enabled: true, mfa_backup_codes: JSON.stringify(hashedCodes) });
         backupCodes = generatedBackupCodes;
+        const accessToken = issueAccessToken(user);
+    res.cookie("access_token", accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: "none",
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+    return res.json({ message: 'MFA enabled successfully. Save backup codes!', backup_codes: backupCodes, mfa_enabled: true });
+
     }
     const accessToken = issueAccessToken(user);
     res.cookie("access_token", accessToken, {
@@ -117,12 +126,13 @@ router.post('/verify-mfa', asyncHandler( async (req, res)=> {
       sameSite: "none",
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
-    if(!firstEnable){
-      res.json({ message: 'MFA enabled successfully. Save backup codes!', backup_codes: backupCodes, mfa_enabled: true });
-    }else{
-      res.json({ message: 'MFA enabled successfully.', mfa_enabled: true });
+    // if(!firstEnable){
+    //   res.json({ message: 'MFA enabled successfully. Save backup codes!', backup_codes: backupCodes, mfa_enabled: true });
+    // }else{
+    //   res.json({ message: 'MFA enabled successfully.', mfa_enabled: true });
 
-    }
+    // }
+    res.json({ message: 'MFA enabled successfully.', mfa_enabled: true });
 
 }));
 
