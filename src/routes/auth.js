@@ -104,9 +104,10 @@ router.post('/verify-mfa', asyncHandler( async (req, res)=> {
       // Fall back to backup code
       // const storedCodes = JSON.parse(user.mfa_backup_codes || '[]');
       const storedCodes = (user.mfa_backup_codes || '[]');
-      console.log("$$$", user.mfa_backup_codes,storedCodes)
+      // console.log("$$$", user.mfa_backup_codes,storedCodes)
       let matchedIndex = -1;
       for (let i = 0; i < storedCodes.length; i++) {
+        console.log("$$$", code, storedCodes[i])
         const match = await bcrypt.compare(code, storedCodes[i]);
         if (match) { matchedIndex = i; break; }
       }
