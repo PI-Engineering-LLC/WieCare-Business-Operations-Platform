@@ -106,12 +106,22 @@ router.post('/verify-mfa', asyncHandler( async (req, res)=> {
       const storedCodes = (user.mfa_backup_codes || '[]');
       // console.log("$$$", user.mfa_backup_codes,storedCodes)
       let matchedIndex = -1;
-      for (let i = 0; i < storedCodes.length; i++) {
-        const cleanCode = code.replace(/^\$\$\$\s*/, '').trim();
-        console.log("$$$", code, storedCodes[i], cleanCode)
-        const match = await bcrypt.compare(cleanCode, storedCodes[i]);
-        if (match) { matchedIndex = i; break; }
+      const codesArray = typeof storedCodes === 'string' ? JSON.parse(storedCodes) : storedCodes;
+      const cleanCode = code.replace(/^\$\$\$\s*/, '').trim();
+      for (let i = 0; i < codesArray.length; i++) {
+        
+        const match = await bcrypt.compare(cleanCode, codesArray[i]);
+        if (match) { 
+          matchedIndex = i; 
+          break; 
+        }
       }
+      // for (let i = 0; i < storedCodes.length; i++) {
+        
+      //   console.log("$$$", code, storedCodes[i], cleanCode)
+      //   const match = await bcrypt.compare(cleanCode, storedCodes[i]);
+      //   if (match) { matchedIndex = i; break; }
+      // }
       if (matchedIndex === -1) {
         return res.status(401).json({ error: 'Invalid code' });
       }
