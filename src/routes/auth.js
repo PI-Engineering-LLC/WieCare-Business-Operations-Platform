@@ -102,8 +102,8 @@ router.post('/verify-mfa', asyncHandler( async (req, res)=> {
     // }
     if (!verified) {
       // Fall back to backup code
-      const storedCodes = JSON.parse(user.mfa_backup_codes || '[]');
-      // const storedCodes = (user.mfa_backup_codes || '[]');
+      // const storedCodes = JSON.parse(user.mfa_backup_codes || '[]');
+      const storedCodes = (user.mfa_backup_codes || '[]');
       console.log("$$$", user.mfa_backup_codes,storedCodes)
       let matchedIndex = -1;
       for (let i = 0; i < storedCodes.length; i++) {
@@ -113,7 +113,7 @@ router.post('/verify-mfa', asyncHandler( async (req, res)=> {
       if (matchedIndex === -1) {
         return res.status(401).json({ error: 'Invalid code' });
       }
-    //   // 3. Consume the code — remove it from the array
+      // 3. Consume the code — remove it from the array
     // storedCodes.splice(matchedIndex, 1);
     // await db('users').where({ id: user.id }).update({
     //   mfa_backup_codes: JSON.stringify(storedCodes),
