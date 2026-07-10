@@ -77,6 +77,7 @@ async function startWorkers() {
   console.log('TRACE: startWorkers() finished.');
 }
 async function triggerNow() {
+  const boss = getBossInstance();
   await boss.start();
   // 'invoice-reminder-job' is the name you gave your cron job in pg-boss
   const jobId = await boss.send('daily-overdue-invoice-job', { manualTrigger: true });
