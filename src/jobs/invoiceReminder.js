@@ -56,7 +56,7 @@ const emailService = require('../services/email.service');
 // }
 async function runOverDueClientsHold() {
     // Daily at 8am: auto-hold clients with invoices overdue > 60 days
-    // Calculate cutoff date (60 days ago)
+    // Calculate cutoff date (60 days ago) 
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 60);
 
@@ -92,14 +92,14 @@ async function runInvoiceReminders() {
     const soon = new Date();
     soon.setDate(soon.getDate() + days);
     
-    const fiftySixDaysFromNow = new Date();
-    fiftySixDaysFromNow.setDate(fiftySixDaysFromNow.getDate() + 56);
+    const fiftySevenDaysFromNow = new Date();
+    fiftySevenDaysFromNow.setDate(fiftySevenDaysFromNow.getDate() + 57);
 
     // 1. Fetch relevant invoices
     const invoices = await db('invoices')
         .where(function() {
             this.where('due_date', '=', soon)
-                .orWhere('issue_date', '=', fiftySixDaysFromNow);
+                .orWhere('issue_date', '=', fiftySevenDaysFromNow);
         })
         .whereNotIn('status', ['paid', 'cancelled']);
 
