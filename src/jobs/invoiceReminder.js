@@ -6,7 +6,10 @@ async function runOverDueClientsHold() {
     // Daily at 8am: auto-hold clients with invoices overdue > 60 days
     const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
     const overdueInvoices = await db('invoices')
-        .where('issue_date', '<', cutoff.toISOString().split('T')[0])
+        .where(function() {
+            this.where('issue_date', '<', cutoff.toISOString().split('T')[0])
+                .orWhere('due_date', '<', new Date());
+        })
         .whereNotIn('status', ['paid', 'cancelled'])
         .select('client_id');
 
@@ -21,13 +24,13 @@ async function runInvoiceReminders() {
 
     const invoices = await db('invoices')
         .whereRaw(`due_date::date = ?`, [soon.toISOString().split('T')[0]])
-        .where('status', ['pending']);
+        .whereNotIn('status', ['paid', 'cancelled']);
 
     for (const invoice of invoices) {
-        const client = await db('clients').where({ id: inv.client_id }).first();
+        const client = await db('clients').where({ id: invoice.client_id }).first();
         //send notification and email to all client user
-        const title = `Invoice ${inv.invoice_number} Due in ${days} Days - Payment Reminder`
-        const message = `<p>Invoice <strong>${inv.invoice_number}</strong> for <strong>$${(invoice.balance_due || 0).toLocaleString()}</strong> is due in ${days} days and unpaid.</p>
+        const title = `Invoice ${invoice.invoice_number} Due in ${days} Days - Payment Reminder`
+        const message = `<p>Invoice <strong>${invoice.invoice_number}</strong> for <strong>$${(invoice.balance_due || 0).toLocaleString()}</strong> is due in ${days} days and unpaid.</p>
                    <p>Please remit payment to avoid your account being placed on hold.</p>`
         if (client?.contact_email) {
             message = `<h2>Invoice Reminder from ${invoice.sending_entity || 'Wiegand'}</h2><p>Dear ${client.contact_name || client.company_name},</p>${message} `
@@ -48,10 +51,10 @@ async function runInvoiceOverDue() {
             .whereRaw(`issue_date::date = ?`, [d.toISOString().split('T')[0]])
             .whereNotIn('status', ['paid', 'cancelled']);
 
-        for (const inv of invoices) {
-            const client = await db('clients').where({ id: inv.client_id }).first();
-            const title = `Invoice ${inv.invoice_number} — ${days}-Day Payment Reminder`
-            const message = `<p>Invoice <strong>${inv.invoice_number}</strong> for <strong>$${(invoice.balance_due || 0).toLocaleString()}</strong> is ${days} days old and unpaid.</p>
+        for (const invoice of invoices) {
+            const client = await db('clients').where({ id: invoice.client_id }).first();
+            const title = `Invoice ${invoice.invoice_number} — ${days}-Day Payment Reminder`
+            const message = `<p>Invoice <strong>${invoice.invoice_number}</strong> for <strong>$${(invoice.balance_due || 0).toLocaleString()}</strong> is ${days} days old and unpaid.</p>
                  <p>Please remit payment to avoid your account being placed on hold at 60 days.</p>`
 
             if (client?.contact_email) {
