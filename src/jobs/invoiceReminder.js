@@ -149,10 +149,7 @@ async function runInvoiceOverDue() {
         targetDate.setDate(now.getDate() - days);
 
         const invoices = await db('invoices')
-            .where(function() {
-                this.where('issue_date', '=', targetDate)
-                    // .orWhere('due_date', '<', now);
-            })
+        .where('issue_date', '=', targetDate) 
             .whereNotIn('status', ['paid', 'cancelled']);
 
         if (invoices.length === 0) continue;
