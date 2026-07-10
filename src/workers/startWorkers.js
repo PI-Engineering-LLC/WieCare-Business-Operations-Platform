@@ -28,7 +28,8 @@ async function startWorkers() {
     await runTrainingReminders();
   });
 
-  await boss.schedule('monthly-training-reminder-job', '0 9 1 * *');
+  // await boss.schedule('monthly-training-reminder-job', '0 9 1 * *');
+  await boss.schedule('daily-invoice-reminder-job', '10 11 * * *'); // Every day at 11:10 AM
   console.log('✓ Monthly training reminder job scheduled successfully in Postgres.');
 
   await boss.createQueue('monthly-inspection-reminder-job');
@@ -37,7 +38,8 @@ async function startWorkers() {
     console.log(`[Job ${thisjob.id}] Executing Monthly Inspection Reminder ...`);
     await runInspectionReminders();
   });
-  await boss.schedule('monthly-inspection-reminder-job', '5 9 1 * *'); // 1st of the month at 9:05 AM
+  // await boss.schedule('monthly-inspection-reminder-job', '5 9 1 * *'); // 1st of the month at 9:05 AM
+  await boss.schedule('daily-invoice-reminder-job', '10 11 * * *'); // Every day at 11:10 AM
 
 
   await boss.createQueue('daily-overdue-hold-job');
@@ -46,7 +48,8 @@ async function startWorkers() {
     console.log(`[Job ${thisjob.id}] Executing Daily Reminders...`);
     await runOverDueClientsHold();
   });
-  await boss.schedule('daily-overdue-hold-job', '0 8 * * *'); // Every day at 8:00 AM
+  // await boss.schedule('daily-overdue-hold-job', '0 8 * * *'); // Every day at 8:00 AM
+  await boss.schedule('daily-invoice-reminder-job', '10 11 * * *'); // Every day at 11:10 AM
 
   await boss.createQueue('daily-overdue-invoice-job');
   await boss.work('daily-overdue-invoice-job', async (job) => {
@@ -54,7 +57,8 @@ async function startWorkers() {
     console.log(`[Job ${thisjob.id}] Executing Daily Reminders...`);
     await runInvoiceOverDue();
   });
-  await boss.schedule('daily-overdue-invoice-job', '5 8 * * *'); // Every day at 8:05 AM
+  // await boss.schedule('daily-overdue-invoice-job', '5 8 * * *'); // Every day at 8:05 AM
+  await boss.schedule('daily-invoice-reminder-job', '10 11 * * *'); // Every day at 11:10 AM
 
 
 
@@ -64,7 +68,8 @@ async function startWorkers() {
     console.log(`[Job ${thisjob.id}] Executing Daily Reminders...`);
     await runInvoiceReminders();
   });
-  await boss.schedule('daily-invoice-reminder-job', '10 9 * * *'); // Every day at 9:10 AM
+  // await boss.schedule('daily-invoice-reminder-job', '10 9 * * *'); // Every day at 9:10 AM
+  await boss.schedule('daily-invoice-reminder-job', '10 11 * * *'); // Every day at 11:10 AM
 
   console.log('✓ All 5 background cron schedules registered in Postgres.');
 
