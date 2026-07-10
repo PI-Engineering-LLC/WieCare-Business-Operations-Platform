@@ -74,9 +74,10 @@ async function triggerNow() {
   const boss = getBossInstance();
   await boss.start();
   // 'invoice-reminder-job' is the name you gave your cron job in pg-boss
-  const jobId = await boss.send('daily-overdue-invoice-job', { manualTrigger: true });
+  // const jobId = await boss.send('daily-overdue-invoice-job', { manualTrigger: true });
   const jobId2 = await boss.send('daily-overdue-hold-job', { manualTrigger: true });
-  console.log(`Job sent with ID: ${jobId} # ${jobId2}`);
+  // console.log(`Job sent with ID: ${jobId} # ${jobId2}`);
+  console.log(`Job sent with ID:  ${jobId2}`);
 }
 
 
