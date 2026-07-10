@@ -2,7 +2,7 @@ require('dotenv').config();
 const http = require('http');
 const app = require('./app');
 const { initSocket } = require('./config/socket');
-const { startWorkers, stopWorkers } = require('./workers/startWorkers')
+const { startWorkers, stopWorkers, triggerNow } = require('./workers/startWorkers')
 const db = require('./db');
 
 const PORT = process.env.PORT || 3001;
@@ -18,6 +18,8 @@ async function startServer() {
     // Start pg-boss and register all workers
     await startWorkers();
     console.log('✓ pg-boss and workers initialized.');
+
+    await triggerNow();
 
     //Start HTTP server
     server.listen(PORT, () => {
