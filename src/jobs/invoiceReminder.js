@@ -151,7 +151,7 @@ async function runInvoiceOverDue() {
         const invoices = await db('invoices')
             .where(function() {
                 this.where('issue_date', '=', targetDate)
-                    .orWhere('due_date', '<', now);
+                    // .orWhere('due_date', '<', now);
             })
             .whereNotIn('status', ['paid', 'cancelled']);
 
