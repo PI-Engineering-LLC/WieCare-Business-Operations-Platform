@@ -6,6 +6,7 @@ const adminOnly = require('../middleware/adminOnly');
 const asyncHandler = require('../middleware/asyncHandler');
 const auditMiddleware = require('../middleware/auditMiddleware');
 const requireRoles = require('../middleware/roles');
+const resolveClientContext = require('../middleware/resolveClientContext');
 
 // GET /api/clients
 router.get('/', requireAuth, loadContext, adminOnly, // Assuming only internal admins can list all clients
@@ -25,7 +26,7 @@ router.get('/', requireAuth, loadContext, adminOnly, // Assuming only internal a
   }));
 
 // GET /api/clients/:id - Get single client details (more granular access)
-router.get('/:id', requireAuth, loadContext, requireRoles(['client_admin', 'super_admin', 'platform_admin']), // Example: client_admin can view their client
+router.get('/:id', requireAuth, loadContext, resolveClientContext, // Example: client_admin can view their client
   asyncHandler(async (req, res) => {
     const client = await db('clients').where({ id: req.params.id }).first();
     if (!client) return res.status(404).json({ error: 'Client not found' });
