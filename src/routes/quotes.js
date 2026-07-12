@@ -2,7 +2,7 @@ const router = require('express').Router();
 const db = require('../db');
 const requireAuth = require('../middleware/auth');
 const loadContext = require('../middleware/loadContext');
-const clientContext = require('../middleware/clientContext');
+const holdCheck = require('../middleware/holdCheck');
 const resolveClientContext = require('../middleware/resolveClientContext');
 const adminOnly = require('../middleware/adminOnly');
 const clientScope = require('../middleware/clientScope');
@@ -28,7 +28,7 @@ router.get('/', requireAuth, loadContext, resolveClientContext,
     res.json(result);
   }));
 
-router.post('/', requireAuth, loadContext, resolveClientContext,
+router.post('/', requireAuth, loadContext, resolveClientContext, holdCheck,
   auditMiddleware({ action: 'quote.created', resourceType: 'quote' }),
   asyncHandler(async (req, res) => {
     const quoteClientId= req.body.client_id;
