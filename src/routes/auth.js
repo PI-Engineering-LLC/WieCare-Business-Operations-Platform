@@ -259,6 +259,9 @@ router.post('/accept-invite', validate(signupSchema), asyncHandler(async (req, r
   if (!valid) {
     return res.status(400).json({ error: 'Invalid invite' });
   }
+  if(matchedInvite.accepted_at){
+    return res.status(400).json({ error: 'Invalid invite.' });
+  }
 
   let user = await db('users').where({ email: matchedInvite.email, deleted_at: null }).first();
 
