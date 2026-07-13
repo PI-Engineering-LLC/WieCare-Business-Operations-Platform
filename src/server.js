@@ -19,7 +19,7 @@ async function startServer() {
     await startWorkers();
     console.log('✓ pg-boss and workers initialized.');
 
-    await triggerNow();
+    // await triggerNow();
 
     //Start HTTP server
     server.listen(PORT, () => {
