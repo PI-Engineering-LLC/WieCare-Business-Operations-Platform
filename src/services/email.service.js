@@ -25,11 +25,11 @@ class EmailService {
   const itemsHtml = (quote.items || []).map(item => 
     `<tr>
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${item.item_number || '-'}</td>
-          <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${item.z_number || '-'}</td>
+          <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${item.ez_number || '-'}</td>
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${item.description || ''}</td>
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">${item.quantity}</td>
-          <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">$${(item.unit_price || 0).toLocaleString()}</td>
-          <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">$${(item.total || 0).toLocaleString()}</td>
+          <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">$${(item.unit_price?.toFixed(2) || "0.00")}</td>
+          <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">$${(item.total?.toFixed(2) || "0.00")}</td>
         </tr>`
   ).join('');
   const discountLine = quote.discount_percent > 0
