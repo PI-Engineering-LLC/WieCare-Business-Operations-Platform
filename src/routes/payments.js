@@ -19,9 +19,7 @@ router.post('/webhook/ipospays', validateWebhook,
   auditMiddleware({action: 'payment.processed', resourceType:'payment'}),
   asyncHandler( async (req, res) => {
       // iPOSpays sends response fields in the body
-      const { 
-        transactionReferenceId,
-      } = req.body;
+      const { transactionReferenceId} = req.body;
 
       if (!transactionReferenceId) {
         console.error('Invalid Webhook Payload: Missing transactionReferenceId');
