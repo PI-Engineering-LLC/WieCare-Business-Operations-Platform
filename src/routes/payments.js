@@ -12,217 +12,57 @@ const axios = require('axios')
 const notificationService = require('../services/notifications.service'); 
 const {getIO} = require('../config/socket')
 const {formatToStrict13}= require('../utils/phone')
+const validateWebhook = require('../middleware/uploadMiddleWare');
+const PaymentService = require('../services/payments')
 
-router.post('/webhook/ipospays',
-  auditMiddleware({action: 'payment.created', resourceType:'payment'}),
+router.post('/webhook/ipospays', validateWebhook,
+  auditMiddleware({action: 'payment.processed', resourceType:'payment'}),
   asyncHandler( async (req, res) => {
-  try {
       // iPOSpays sends response fields in the body
       const { 
-        responseCode,
         transactionReferenceId,
-        transactionId,
-        totalAmount,
-        errResponseCode,
-        responseMessage,
-        errResponseMessage,
-        responseApprovalCode,
-          status, 
-          transaction_id, 
-
-          amount, 
-          message 
       } = req.body;
 
-      console.log(`--- Webhook Received for Invoice: ${transactionReferenceId} ---`);
-
-      //Check if the payment was successful
-      if (responseCode == '200' || responseCode == 200) {
-          const invoiceId = transactionReferenceId.split('--')[0].split('IN')[1];
-          const amountPaid = parseFloat(amount) / 100; // Convert cents back to dollars
-
-          //update invoice
-          const updateSuccess = await updateMyInvoiceRecord(invoiceId, amountPaid, transactionReferenceId);
-
-          if (updateSuccess) {
-              console.log(`✅ Success: ${amountPaid} applied to Invoice ${invoiceId}`);
-              // Send 200 OK to iPOSpays so they stop sending the webhook
-              return res.status(200).send('OK');
-          } else {
-              console.error('❌ Database update failed.');
-              return res.status(500).send('Internal Server Error');
-          }
-      } else {
-          console.warn(`⚠️ Payment not approved. Status: ${responseCode}, Message: ${errResponseMessage}`);
-          const invoiceId = transactionReferenceId.split('--')[0].split('IN')[1];
-          const amountPaid = parseFloat(amount) / 100; 
-          notifyClientOfPaymentFailure(invoiceId, amountPaid, responseCode, errResponseMessage)
-          return res.status(200).send('Payment not approved, no action taken.');
+      if (!transactionReferenceId) {
+        console.error('Invalid Webhook Payload: Missing transactionReferenceId');
+        return res.status(400).send('Bad Request');
       }
 
-  } catch (error) {
-      console.error('Critical Webhook Error:', error);
-      res.status(500).send('Webhook Processing Error');
-  }
+      try {
+        console.log(`--- Webhook Received for Invoice: ${transactionReferenceId} ---`);
+        await PaymentService.reconcilePaymentStatus(transactionReferenceId);
+        
+        return res.status(200).send('OK');
+  
+      } catch (error) {
+        // 1. Differentiate: "Record not found" is a permanent failure
+        if (error.message === 'Payment record not found') {
+          console.warn(`⚠️ Webhook ignored: ${error.message} for ID: ${transactionReferenceId}`);
+          // Return 200 to prevent retries
+          return res.status(200).send('Acknowledged (Record not found)');
+        }
+  
+        // 2. Transient failures (Database down, Network error) should still return 500
+        console.error('Critical Webhook Error:', error);
+        res.status(500).send('Webhook Processing Error');
+      }
+     
+
+  
 }));
 
-async function updateMyInvoiceRecord(invoiceId, amountPaid, transactionId,method ='ipospays') {
-  const inv = await db('invoices').where({ id: invoiceId }).first();
-    if (inv) {
-      const newPaid    = parseFloat(amountPaid || 0) ;
-      const newBalance = parseFloat(inv.total_amount) - newPaid;
-      const newStatus  = newBalance <= 0 ? 'paid' : 'partial';
-      const paymentHistory = [...(inv.payment_history || []), {
-        date: new Date().toISOString().split('T')[0],
-        amountPaid: parseFloat(amountPaid),
-        method,
-        reference: transactionId
-        // reference: `PAY-${Date.now()}` transactionId
-      }];      
-      await db('invoices').where({ id: invoiceId }).update({
-        amount_paid: newPaid,
-        balance_due: Math.max(0, newBalance),
-        payment_history: JSON.stringify(paymentHistory ?? []),
-        status:      newStatus,
-        updated_at:  new Date(),
-      });
-      let clientContactEmail = null;
-      let is_email_sent = true;
-      let client_id = inv.client_id;
-  if (is_email_sent) {
-      // Fetch the client's contact email if email sending is requested
-      const client = await db('clients').where({ id: client_id }).select('contact_email').first();
-      if (client) {
-          clientContactEmail = client.contact_email;
-      } else {
-          console.warn(`Client with ID ${client_id} not found for email notification.`);
-      }
-  }
-
-  const notifications = await notificationService.notifyClientUsers({
-      clientId: client_id,
-      email: clientContactEmail, // Pass the contact email for the service to use
-      title:    'Payment Received',
-      message:  `Payment of $${amountPaid.toFixed(2)} received for invoice #${inv.invoice_number}`,
-      type:     'success',
-      category: 'invoice',
-      link: `/Invoices?invoice_id=${inv.id}`,
-      isSendEmail: is_email_sent,
-        resourceId: inv.id,
-        resourceType: "invoice"
-  });
-    }
-  return true; 
-
-  
-}
-async function notifyClientOfPaymentFailure(invoiceId, amountPaid, responseCode, errResponseMessage) {
-  const inv = await db('invoices').where({ id: invoiceId }).first();
-    if (inv) {
-      
-      let clientContactEmail = null;
-      let is_email_sent = true;
-      let client_id = inv.client_id;
-  if (is_email_sent) {
-      // Fetch the client's contact email if email sending is requested
-      const client = await db('clients').where({ id: client_id }).select('contact_email').first();
-      if (client) {
-          clientContactEmail = client.contact_email;
-      } else {
-          console.warn(`Client with ID ${client_id} not found for email notification.`);
-      }
-  }
-
-  const notifications = await notificationService.notifyClientUsers({
-      clientId: inv.client_id,
-      email: clientContactEmail, // Pass the contact email for the service to use
-      title:    'Payment Error',
-      message:  `Payment of $${amountPaid.toFixed(2)} for invoice #${inv.invoice_number} not approved, no action taken. ${responseCode} ${errResponseMessage}`,
-      type:     'failure',
-      category: 'invoice',
-      link: `/Invoices?invoice_id=${inv.id}`,
-      isSendEmail: is_email_sent,
-        resourceId: inv.id,
-        resourceType: "invoice"
-  });
-    }
-  return true; 
-
-  
-}
 
 //create payment session/get payment link to redirect user to ipos, then ipos sends results to hook
 router.post('/ipospays/createPaymentSession', requireAuth,loadContext,resolveClientContext,
+  auditMiddleware({action: 'payment.created', resourceType:'payment'}),
   asyncHandler( async (req, res) => {
   
-    const { amount, invoiceId } = req.body;
-    // const amountInCents = Math.round(amount * 100);
-
-    //check if there is an invoice and auth
-    const invoice = await db('invoices').where({ id: invoiceId }).first();
-  if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
-  const amountInCents = Math.round(invoice.balance_due * 100);
-    const client = await db('clients').where({ id: invoice.client_id || req.clientId }).first();
-    let formattedPhoneNo;
-    if(client.contact_phone)
-    formattedPhoneNo = formatToStrict13(client.contact_phone)
+    const { invoiceId } = req.body;
   
-  const config = {
-    headers: {
-        // This is the Auth Token you generated in the portal
-        'token': process.env.IPOSPAYS_AUTH_TOKEN, 
-        'Content-Type': 'application/json'
-    }
-};
-const body = {
-  "merchantAuthentication": {
-      "merchantId": process.env.IPOSPAYS_TPN, // Your Cloud TPN
-      "transactionReferenceId": `IN${invoice.id}--${Date.now().toString(36)}`
-  },
-  "transactionRequest": {
-      "transactionType": 1, // 1 = Sale
-      "amount": amountInCents.toString(), // e.g., "25.00"
-      "calculateFee": true,
-    "tipsInputPrompt": false,
-    "calculateTax": false,
-      "invoiceNumber": invoice.invoice_number
-  },
-  // Callback for the server (Webhook)
-  "notificationOption": {
-    
-    "notifyBySMS": false,
-    "notifyByPOST": true,
-      "postAPI": `${process.env.BACKEND_URL}/api/payments/webhook/ipospays`,
-      "notifyByRedirect": true, 
-      "returnUrl": `${process.env.FRONTEND_URL}/Invoices?action=invoices`,
-      "failureUrl": `${process.env.FRONTEND_URL}/Invoices?action=retry`, 
-      "cancelUrl": `${process.env.FRONTEND_URL}/Invoices?action=cancel`,
-  },
- 
-  "preferences": {
-    "integrationType": 1,
-    "avsVerification": false,
-    "eReceipt": true,
-    "eReceiptInputPrompt": formattedPhoneNo?.length !== 13,
-    "customerEmail": client.contact_email,
-    "customerMobile": formattedPhoneNo,
-    "requestCardToken": true,
-    "shortenURL": true,
-    "sendPaymentLink": true, 
- 
-  },
-  "personalization": {
-    // "logoUrl":'',
-  },
- 
- 
-};
-
-
 try {
-  const response = await axios.post(`${process.env.IPOSPAYS_API_URL}`, body, config);
-  if (response.data.information) {
-      res.json({ url: response.data.information });
+  const response = await PaymentService.checkPaymentLink(invoiceId);
+  if (response.payment_url) {
+      res.json({ url: response.payment_url });
   } else {
       res.status(400).json({ error: "Failed to generate URL" });
   }
@@ -235,6 +75,118 @@ try {
    
 }));
 
+router.post('/recordPayment', requireAuth,loadContext, adminOnly, 
+  auditMiddleware({action: 'payment.recorded', resourceType:'payment'}),
+  asyncHandler( async (req, res) => {
+    const{ amount,method,invoice_id, date, notes,paymentHistory} = req.body
+    //paid_at,status,recorded_by, transactionReferenceId, reference, notes
+   
+  const invoice = await db('invoices').where({ id: invoice_id }).first()
+  //.update({...invData, created_by: req.user.id}).returning('*');
+  if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+  const reference = PaymentService.generatePaymentReference();
+  const [payment] = await db('payments').insert({
+    amount: amount,
+    method,
+    reference,
+    status: 'completed',
+    invoice_id : invoice.id,
+    client_id: invoice.client_id,
+    recorded_by: req.user.id,
+    paid_at: date || new Date()
+  
+  }).returning('*');
+
+  const newTotalPaid = (invoice.amount_paid || 0) + parseFloat(amount);
+  const balanceDue = (invoice.total_amount || 0) - newTotalPaid;
+  const newStatus = balanceDue <= 0 ? 'paid' : newTotalPaid > 0 ? 'partial' : selectedInvoice.status;
+  await db('invoices')
+  .where({ id: invoice_id })
+  .update({ amount_paid: newTotalPaid, balance_due: balanceDue, status: newStatus, paymentHistory: JSON.stringify(paymentHistory ?? [])});
+
+  // Mark invoice paid if amount covers total
+  // if (parseFloat(amount) >= parseFloat(invoice.total_due)) {
+  //   await db('invoices')
+  //     .where({ id: invoice_id })
+  //     .update({ status: 'paid', amount_paid: newTotalPaid, balance_due: balanceDue, status: newStatus});
+  // }
+
+  res.status(201).json({ payment });
+}));
+router.get('/', requireAuth,loadContext,resolveClientContext, 
+  asyncHandler( async (req, res) => {
+  const { invoice_id, status, method, page = 1, limit = 50 } = req.query;
+  const offset = (page - 1) * limit;
+
+  let query = db('payments as p')
+    .join('clients as t', 't.id', 'p.client_id')
+    .select('p.*', 't.company_name as client_name');
+    if (req.query.client_id) query.where('p.client_id', req.query.client_id);
+ clientScope(query, req);
+
+  if (req.clientId) query.where('p.client_id', req.clientId);
+  if (invoice_id)   query.where('p.invoice_id', invoice_id);
+  if (status)       query.where('p.status', status);
+  if (method)       query.where('p.method', method);
+  let payments;
+  if (req.query.id) {
+    payments = await query.where('p.id', req.query.id).first();
+    if (!result) return res.status(404).json({ error: 'Invoice not found' });
+  } else {
+    const [{ count }] = await query.clone().count('p.id as count');
+   payments = await query.orderBy('p.created_at', 'desc').limit(limit).offset(offset);
+
+  res.json({ payments, total: parseInt(count) });
+  }
+
+  
+}));
+
+router.get('/:id', requireAuth,loadContext, async (req, res) => {
+  const payment = await db('payments as p')
+    .join('clients as t', 't.id', 'p.client_id')
+    .join('invoices as i', 'i.id', 'p.invoice_id')
+    .where('p.id', req.params.id)
+    .select('p.*', 't.name as client_name', 'i.invoice_number')
+    .first();
+  if (!payment) return res.status(404).json({ error: 'Payment not found' })
+  // if (req.clientId && payment.client_id !== req.clientId) return res.status(403).json({ error: 'Forbidden' });
+  res.json({ payment });
+});
+router.post('/:id/refund', requireAuth,loadContext, adminOnly, 
+  auditMiddleware({action: 'payment.refunded', resourceType:'payment'}),
+  asyncHandler( async (req, res) => {
+    const { amount, reason } = req.body;
+  const payment = await db('payments').where({ id: req.params.id, status: 'completed' }).first();
+  if (!payment) return res.status(404).json({ error: 'Completed payment not found' });
+
+  const refundAmount = amount || payment.amount;
+  if (parseFloat(refundAmount) > parseFloat(payment.amount)) {
+    return res.status(400).json({ error: 'Refund amount exceeds original payment' })
+  }
+
+  const [refund] = await db('payments')
+    .insert({
+      invoice_id:       payment.invoice_id,
+      client_id:        payment.client_id,
+      amount:           -Math.abs(refundAmount),
+      method:           payment.method,
+      status:           'refunded',
+      reference:        `REFUND-${payment.reference}`,
+      notes:            reason,
+      // parent_payment_id: payment.id,
+      recorded_by:      req.user.id,
+    })
+    .returning('*');
+
+  // Reopen invoice if refunded
+  await db('invoices')
+    .where({ id: payment.invoice_id, status: 'paid' })
+    .update({ status: 'sent'});
+    // .update({ status: 'sent', paid_at: null, updated_at: new Date() });
+
+  res.status(201).json({ refund });
+  }))
 
 module.exports = router;
 

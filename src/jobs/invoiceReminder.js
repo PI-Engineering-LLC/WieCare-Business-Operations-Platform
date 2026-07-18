@@ -1,3 +1,4 @@
+require('dotenv').config();
 const db = require('../db');
 const notificationService = require('../services/notifications.service');
 const emailService = require('../services/email.service');
@@ -118,24 +119,30 @@ async function runInvoiceReminders() {
         const title = `Invoice ${invoice.invoice_number} Due in ${days} Days - Payment Reminder`;
         
         // Use 'let' to allow reassignment
-        let message = `<p>Invoice <strong>${invoice.invoice_number}</strong> for <strong>$${(invoice.balance_due || 0).toLocaleString()}</strong> is due in ${days} days and unpaid.</p>
-                       <p>Please remit payment to avoid your account being placed on hold.</p>`;
+        let emailMessage = `<p>Invoice <strong>${invoice.invoice_number}</strong> for <strong>$${(invoice.balance_due || 0).toLocaleString()}</strong> is due in ${days} days and unpaid.</p>
+                       <p>Please remit payment to avoid your <a href='${process.env.FRONTEND_URL}'>account</a> being placed on hold.</p>`;
 
-        message = `<h2>Invoice Reminder from ${invoice.sending_entity || 'Wiegand'}</h2><p>Dear ${client.contact_name || client.company_name},</p>${message}`;
+        emailMessage = `<h2>Invoice Reminder from ${invoice.sending_entity || 'Wiegand'}</h2><p>Dear ${client.contact_name || client.company_name},</p>${emailMessage}`;
         
         await emailService.queue({ 
             type: 'invoice_reminder', 
             to: client.contact_email, 
-            payload: { title, message } 
+            payload: { title, emailMessage } 
         });
+
+        const message = `Invoice ${invoice.invoice_number}for $${(invoice.balance_due || 0).toLocaleString()}is due in ${days} days and unpaid.`
 
         notificationService.notifyClientUsers({ 
             email: client.contact_email, 
             clientId: client.id, 
             type: 'reminder', 
             category: 'invoice', 
+            link: `/Invoices?invoice_id=${invoice.id}`,
             title, 
-            message 
+            message,
+            is_email_sent: !!client?.contact_email,
+            resourceId: invoice.id,
+            resourceType: "invoice_reminder" 
         });
     }
 }
@@ -164,24 +171,30 @@ async function runInvoiceOverDue() {
             if (!client?.contact_email) continue;
 
             const title = `Invoice ${invoice.invoice_number} — ${days}-Day Payment Reminder`;
-            let message = `<p>Invoice <strong>${invoice.invoice_number}</strong> for <strong>$${(invoice.balance_due || 0).toLocaleString()}</strong> is ${days} days old and unpaid.</p>
-                           <p>Please remit payment to avoid your account being placed on hold at 60 days.</p>`;
+            let emailMessage = `<p>Invoice <strong>${invoice.invoice_number}</strong> for <strong>$${(invoice.balance_due || 0).toLocaleString()}</strong> is ${days} days old and unpaid.</p>
+                           <p>Please remit payment to avoid your <a href='${process.env.FRONTEND_URL}'>account</a> being placed on hold at 60 days.</p>`;
 
-            message = `<h2>Invoice Overdue Reminder from ${invoice.sending_entity || 'Wiegand'}</h2><p>Dear ${client.contact_name || client.company_name},</p>${message}`;
+            emailMessage = `<h2>Invoice Overdue Reminder from ${invoice.sending_entity || 'Wiegand'}</h2><p>Dear ${client.contact_name || client.company_name},</p>${emailMessage}`;
 
             await emailService.queue({ 
                 type: 'invoice_reminder', 
                 to: client.contact_email, 
-                payload: { title, message } 
+                payload: { title, emailMessage } 
             });
+            const message = `Invoice ${invoice.invoice_number}for $${(invoice.balance_due || 0).toLocaleString()} is ${days} days old and unpaid.<`
+
 
             notificationService.notifyClientUsers({ 
                 email: client.contact_email, 
                 clientId: client.id, 
                 type: 'warning', 
                 category: 'invoice', 
+                link: `/Invoices?invoice_id=${invoice.id}`,
                 title, 
-                message 
+                message,
+                is_email_sent: !!client?.contact_email,
+                resourceId: invoice.id,
+                resourceType: "invoice_reminder" 
             });
         }
     }

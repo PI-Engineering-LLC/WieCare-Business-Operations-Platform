@@ -19,9 +19,10 @@ async function runInspectionReminders() {
   
     for (const c of clients) {
         const title =`Annual Inspection Due`
-        const message=`<p>Hi ${c.contact_name || c.company_name},</p>
-                 <p>Your annual inspection is due. Please log in to schedule a service visit.</p>`
-      notificationService.notifyClientUsers({email: c.contact_email,clientId: c.id, category: 'inspection', type:'reminder', title, message})
+        const message=`Your annual inspection is due. Please schedule a service visit.`
+        // const message=`<p>Hi ${c.contact_name || c.company_name},</p>
+        //          <p>Your annual inspection is due. Please log in to schedule a service visit.</p>`
+      notificationService.notifyClientUsers({email: c.contact_email,clientId: c.id, category: 'inspection', type:'reminder', link: `/Maintenance`, title, message, is_email_sent: !!c?.contact_email})
       await emailService.queue({ type: 'inspection_reminder', to: c?.contact_email, payload: {       
               client: c,
               year: thisYear
