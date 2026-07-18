@@ -184,7 +184,7 @@ async reconcilePaymentStatus (transactionReferenceId) {
   }, config);
 
   const querySuccess =  statusData.status       
-  const { responseCode, responseMessage, transactionReferenceId,amount, errResponseCode, errResponseMessage, responseApprovalCode } = statusData.data;
+  const { responseCode, responseMessage,amount, errResponseCode, errResponseMessage, responseApprovalCode } = statusData.data;
   // const status = statusData.status
     const reference = this.generatePaymentReference();
     const method ='ipospays'
@@ -225,7 +225,7 @@ async reconcilePaymentStatus (transactionReferenceId) {
   }, config);
 
   const querySuccess =  statusData.status       
-  const { responseCode, responseMessage, transactionReferenceId,amount, errResponseCode, errResponseMessage, responseApprovalCode } = statusData.data;
+  const { responseCode, responseMessage,amount, errResponseCode, errResponseMessage, responseApprovalCode } = statusData.data;
   // const status = statusData.status
 
   // 2. Map POS status to your DB status
