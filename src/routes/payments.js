@@ -1,4 +1,4 @@
-const router   = require('express').Router();
+const router  = require('express').Router();
 const db       = require('../db');
 const requireAuth = require('../middleware/auth');
 const loadContext = require('../middleware/loadContext');
@@ -12,7 +12,7 @@ const axios = require('axios')
 const notificationService = require('../services/notifications.service'); 
 const {getIO} = require('../config/socket')
 const {formatToStrict13}= require('../utils/phone')
-const validateWebhook = require('../middleware/uploadMiddleWare');
+const validateWebhook = require('../middleware/webhook');
 const PaymentService = require('../services/payments')
 
 router.post('/webhook/ipospays', validateWebhook,
