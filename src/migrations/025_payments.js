@@ -17,8 +17,10 @@ exports.up = (knex) => knex.schema.createTable('payments', (t) => {
     t.index(['invoice_id'])
     t.timestamp('created_at').defaultTo(knex.fn.now());
     t.timestamp('updated_at').defaultTo(knex.fn.now());
+    t.timestamp('link_expires_at', { useTz: true }).nullable();
     t.check(`method IN ('ipospays','ach','credit_card','debit_card',
                     'cash','check','wire','phone','online')`, [], 'payments_method_check');
     t.check(`status IN ('pending','completed','failed','refunded', 'orphan')`, [], 'payments_status_check');
+    t.index(['link_expires_at'], 'idx_payments_link_expires_at');
   });
   exports.down = (knex) => knex.schema.dropTable('payments');

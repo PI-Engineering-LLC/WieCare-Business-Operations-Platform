@@ -1,3 +1,4 @@
+require('dotenv').config();
 const db = require('../db');
 const emailService = require('./email.service');
 const { getIO } = require('../config/socket'); // Assuming this provides the Socket.IO instance
@@ -107,11 +108,15 @@ class NotificationService {
         io.to('admins').emit('notification:new', { title, message, type, category, link, resourceId, resourceType });
       }
       if (isSendEmail) {
-        for (const admin of admins) {
-          if (admin.email) {
-              await emailService.queue({ to: admin.email, type: category, payload: { title, message, link } });
-          }
-        }
+        const adminEmail = process.env.ADMIN_EMAIL
+        if (adminEmail) {
+          await emailService.queue({ to: adminEmail, type: category, payload: { title, message, link } });
+      }
+        // for (const admin of admins) {
+        //   if (admin.email) {
+        //       await emailService.queue({ to: admin.email, type: category, payload: { title, message, link } });
+        //   }
+        // }
       }
       return notifications;
     }

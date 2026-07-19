@@ -12,10 +12,38 @@ const app = express();
 
 // ─── Security ───
 app.use(helmet());
-app.use(cors({ origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:5173', 
-  credentials: true,methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
-  allowedHeaders: ['Content-Type', 'Authorization','x-tenant-id'] }));
+
+const isDev = process.env.NODE_ENV === 'development';
+
+// const corsOptions = {
+//   origin: isDev ? '*' : process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:5173',
+//   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+//   exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
+//   allowedHeaders: ['Content-Type', 'Authorization','x-tenant-id'],
+//   credentials: !isDev // Usually true in prod, false if origin is '*'
+// };
+//FRONTEND_URL
+let corsOptions 
+if(isDev){
+  // corsOptions = { origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:5173', 
+  //   credentials: true }
+  corsOptions = { origin:  'http://localhost:5173', 
+    credentials: true ,methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
+    allowedHeaders: ['Content-Type', 'Authorization','x-tenant-id'] };
+
+}else{
+   corsOptions = { origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:5173', 
+    credentials: true,methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
+    allowedHeaders: ['Content-Type', 'Authorization','x-tenant-id'] };
+}
+app.use(cors(corsOptions))
+
+// app.use(cors({ origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:5173', 
+//   credentials: true,methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+//   exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
+//   allowedHeaders: ['Content-Type', 'Authorization','x-tenant-id'] }));
 // app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true,
 //   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 //   allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-Id']

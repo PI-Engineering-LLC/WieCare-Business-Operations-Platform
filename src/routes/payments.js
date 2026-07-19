@@ -15,11 +15,13 @@ const {formatToStrict13}= require('../utils/phone')
 const validateWebhook = require('../middleware/webhook');
 const PaymentService = require('../services/payments')
 
-router.post('/webhook/ipospays', validateWebhook,
+//router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`, validateWebhook,
+router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
   auditMiddleware({action: 'payment.processed', resourceType:'payment'}),
   asyncHandler( async (req, res) => {
+    console.log("^^^^^^^^^",req.params,req.params.secret, req.body.transactionReferenceId, req.body.responseCode, req.body.responseMessage, req.body.amount, req.body.responseApprovalCode, req.body.errResponseMessage)
       // iPOSpays sends response fields in the body
-      const { transactionReferenceId} = req.body;
+      const { transactionReferenceId, responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode } = req.body;
 
       if (!transactionReferenceId) {
         console.error('Invalid Webhook Payload: Missing transactionReferenceId');
@@ -28,7 +30,7 @@ router.post('/webhook/ipospays', validateWebhook,
 
       try {
         console.log(`--- Webhook Received for Invoice: ${transactionReferenceId} ---`);
-        await PaymentService.reconcilePaymentStatus(transactionReferenceId);
+        await PaymentService.reconcilePaymentStatus(transactionReferenceId,responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode, req.body );
         
         return res.status(200).send('OK');
   
@@ -59,9 +61,13 @@ router.post('/ipospays/createPaymentSession', requireAuth,loadContext,resolveCli
   
 try {
   const response = await PaymentService.checkPaymentLink(invoiceId);
+  
   if (response.payment_url) {
       res.json({ url: response.payment_url });
-  } else {
+  } else if (response.payment_status) {
+    res.status(400).json({ error: `Payment status : ${response.payment_status} ` });
+} 
+  else {
       res.status(400).json({ error: "Failed to generate URL" });
   }
 } catch (error) {
@@ -76,17 +82,17 @@ try {
 router.post('/recordPayment', requireAuth,loadContext, adminOnly, 
   auditMiddleware({action: 'payment.recorded', resourceType:'payment'}),
   asyncHandler( async (req, res) => {
-    const{ amount,method,invoice_id, date, notes,paymentHistory} = req.body
+    const{ amount,method,invoice_id, date, notes,paymentHistory, reference} = req.body
     //paid_at,status,recorded_by, transactionReferenceId, reference, notes
    
   const invoice = await db('invoices').where({ id: invoice_id }).first()
   //.update({...invData, created_by: req.user.id}).returning('*');
   if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
-  const reference = PaymentService.generatePaymentReference();
+  const referenceGen = PaymentService.generatePaymentReference();
   const [payment] = await db('payments').insert({
     amount: amount,
     method,
-    reference,
+    reference: reference || referenceGen,
     status: 'completed',
     invoice_id : invoice.id,
     client_id: invoice.client_id,
@@ -95,12 +101,13 @@ router.post('/recordPayment', requireAuth,loadContext, adminOnly,
   
   }).returning('*');
 
-  const newTotalPaid = (invoice.amount_paid || 0) + parseFloat(amount);
-  const balanceDue = (invoice.total_amount || 0) - newTotalPaid;
+  const newTotalPaid = parseFloat(invoice.amount_paid || 0) + parseFloat(amount);
+  const balanceDue = parseFloat(invoice.total_amount || 0) - newTotalPaid;
   const newStatus = balanceDue <= 0 ? 'paid' : newTotalPaid > 0 ? 'partial' : selectedInvoice.status;
-  await db('invoices')
-  .where({ id: invoice_id })
-  .update({ amount_paid: newTotalPaid, balance_due: balanceDue, status: newStatus, paymentHistory: JSON.stringify(paymentHistory ?? [])});
+  console.log("newTotalPaid",newTotalPaid,balanceDue, amount, newStatus)
+  const [updatedInvoice] =await db('invoices')
+  .where({ id: invoice.id })
+  .update({ amount_paid: newTotalPaid, balance_due: balanceDue, status: newStatus,  created_by: req.user.id, payment_history: JSON.stringify(paymentHistory ?? [])}).returning('*');
 
   // Mark invoice paid if amount covers total
   // if (parseFloat(amount) >= parseFloat(invoice.total_due)) {
@@ -109,7 +116,7 @@ router.post('/recordPayment', requireAuth,loadContext, adminOnly,
   //     .update({ status: 'paid', amount_paid: newTotalPaid, balance_due: balanceDue, status: newStatus});
   // }
 
-  res.status(201).json({ payment });
+  res.status(201).json({ payment , updatedInvoice});
 }));
 router.get('/', requireAuth,loadContext,resolveClientContext, 
   asyncHandler( async (req, res) => {
@@ -131,10 +138,10 @@ router.get('/', requireAuth,loadContext,resolveClientContext,
     payments = await query.where('p.id', req.query.id).first();
     if (!result) return res.status(404).json({ error: 'Invoice not found' });
   } else {
-    const [{ count }] = await query.clone().count('p.id as count');
+    // const [{ count }] = await query.clone().count('p.id as count');
    payments = await query.orderBy('p.created_at', 'desc').limit(limit).offset(offset);
-
-  res.json({ payments, total: parseInt(count) });
+   res.json({ payments });
+  // res.json({ payments, total: parseInt(count) });
   }
 
   

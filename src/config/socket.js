@@ -4,17 +4,38 @@ const db = require('../db');
 const cookie = require('cookie');
 
 let io;
+const isDev = process.env.NODE_ENV === 'development';
+
+let corsOptions 
+if(isDev){
+  // corsOptions = { origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:5173', 
+  //   credentials: true }
+  corsOptions = { origin:  'http://localhost:5173', 
+    credentials: true ,methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
+    allowedHeaders: ['Content-Type', 'Authorization','x-tenant-id'] };
+
+}else{
+   corsOptions = { origin: process.env.ALLOWED_ORIGINS?.split(',') || 'http://localhost:5173', 
+    credentials: true,methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
+    allowedHeaders: ['Content-Type', 'Authorization','x-tenant-id'] };
+}
 
 function initSocket(server) {
   io = new Server(server, {
-    cors: {
-      origin: process.env.ALLOWED_ORIGINS?.split(','),
-      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization','x-tenant-id'],
-      credentials: true,
-    },
+    cors: corsOptions,
     transports: ['websocket', 'polling'],
   });
+  // io = new Server(server, {
+  //   cors: {
+  //     origin: process.env.ALLOWED_ORIGINS?.split(','),
+  //     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  //     allowedHeaders: ['Content-Type', 'Authorization','x-tenant-id'],
+  //     credentials: true,
+  //   },
+  //   transports: ['websocket', 'polling'],
+  // });
 
   // Auth middleware — runs before every connection
   io.use(async (socket, next) => {

@@ -59,7 +59,8 @@ router.post('/', requireAuth, loadContext, resolveClientContext, holdCheck,
         category: 'quote',
         link: `/AdminQuotes?quote_id=${quote.id}`,
         resourceId: quote.id,
-        resourceType: "quote"
+        resourceType: "quote",
+        isSendEmail: true
       });
 
     }
@@ -162,7 +163,8 @@ router.patch('/:id', requireAuth, loadContext, resolveClientContext,
         category: 'quote',
         link: `/AdminQuotes?quote_id=${quote.id}`,
         resourceId: quote.id,
-        resourceType: "quote"
+        resourceType: "quote",
+        isSendEmail: true
       });
     }
 

@@ -118,7 +118,7 @@ router.post('/verify-mfa', asyncHandler(async (req, res) => {
     const accessToken = issueAccessToken(user);
     res.cookie("access_token", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: "none",
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
@@ -139,7 +139,7 @@ router.post('/verify-mfa', asyncHandler(async (req, res) => {
     const accessToken = issueAccessToken(user);
     res.cookie("access_token", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: "none",
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
@@ -149,7 +149,7 @@ router.post('/verify-mfa', asyncHandler(async (req, res) => {
   const accessToken = issueAccessToken(user);
   res.cookie("access_token", accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: "none",
     maxAge: 15 * 60 * 1000, // 15 minutes
   });
@@ -185,7 +185,7 @@ router.post('/login', validate(loginSchema), asyncHandler(async (req, res) => {
     );
     res.cookie("access_token", partialToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: "none",
       maxAge: 5 * 60 * 1000, // 5 minutes
     });
@@ -197,14 +197,15 @@ router.post('/login', validate(loginSchema), asyncHandler(async (req, res) => {
 
   res.cookie("refresh_token", refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: "none",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
   res.cookie("access_token", accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
+    // secure: true,
     sameSite: "none",
     maxAge: 15 * 60 * 1000, // 15 minutes
   });
@@ -231,13 +232,13 @@ router.post('/refresh', asyncHandler(async (req, res) => {
 
   res.cookie('refresh_token', newRefreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: 'none',
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
   res.cookie("access_token", newAccessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: "none",
     maxAge: 15 * 60 * 1000, // 15 minutes
   });
@@ -395,12 +396,12 @@ router.post('/logout', requireAuth, loadContext, resolveClientContext, asyncHand
 
   res.clearCookie('refresh_token', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: 'none',
   });
   res.clearCookie('access_token', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: 'none',
   });
   res.json({ message: 'Logged out' });
@@ -410,12 +411,12 @@ router.post('/logout-all', requireAuth, asyncHandler(async (req, res) => {
   await revokeAllUserTokens(req.user.id);
   res.clearCookie('refresh_token', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: 'none',
   });
   res.clearCookie('access_token', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: true,
     sameSite: 'none',
   });
   res.json({ message: 'Logged out from all devices' });
@@ -492,7 +493,7 @@ router.get('/google/callback',
       );
       res.cookie("access_token", partialToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: true,
         sameSite: "none",
         maxAge: 5 * 60 * 1000, // 5 minutes
       });
@@ -507,13 +508,13 @@ router.get('/google/callback',
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
     res.cookie("access_token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: "none",
       maxAge: 15 * 60 * 1000, // 15 minutes
     });

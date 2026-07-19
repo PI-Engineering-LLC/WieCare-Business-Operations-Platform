@@ -17,7 +17,7 @@ class EmailService {
   notification:         this.buildNotificationEmail.bind(this),
   invoice_reminder:     this.buildEmail.bind(this),
   general:              this.buildEmail.bind(this),
-  default:              this.buildNotificationEmail.bind(this),
+  default:              this.buildEmail.bind(this),
 };
   // ── Template builders ──────────────────────────────────────────────
 
@@ -28,8 +28,8 @@ class EmailService {
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${item.ez_number || '-'}</td>
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${item.description || ''}</td>
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">${item.quantity}</td>
-          <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">$${(item.unit_price?.toFixed(2) || "0.00")}</td>
-          <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">$${(item.total?.toFixed(2) || "0.00")}</td>
+          <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">$${(item.unit_price || "0.00")}</td>
+          <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">$${(item.total || "0.00")}</td>
         </tr>`
   ).join('');
   const discountLine = quote.discount_percent > 0
@@ -70,7 +70,6 @@ class EmailService {
               </tr>
             </table>
             ${quote.valid_until ? `<p style="font-size:13px;color:#718096">This quote is valid until <strong>${quote.valid_until}</strong>.</p>` : ''}
-            ${quote.notes ? `<p style="font-size:13px;color:#718096"><strong>Notes:</strong> ${quote.notes}</p>` : ''}
             <p>Please <a href='${process.env.FRONTEND_URL}'>log in</a> to your portal to review and approve or request changes.</p>
             <p style="margin-top:24px;color:#718096;font-size:13px">— ${quote.sending_entity || 'Wiegand'}</p>
           </div>
@@ -132,12 +131,19 @@ class EmailService {
   }
    buildEmail({ title, message }) {
     return {
-      subject: `${title}`,
+      subject: `${title || 'You have a new notification'}`,
       html: `
         <div style="font-family:sans-serif;max-width:680px;margin:0 auto">
-          ${message} 
+          ${message ||
+            `
+      <p>Hi,</p>
+      <p>You have a new notification. Please <a href='${process.env.FRONTEND_URL}'>log in</a>to the portal to view.</p>
+      
+    `
+          } 
         </div>
       `,
+      
     };
   }
 
@@ -189,8 +195,8 @@ class EmailService {
     await sendEmail({to, subject, body: html,from});
   }
   renderTemplate(type, payload ) {
-    const builder = this.EMAIL_TEMPLATES[type];
-    if (!builder) builder = EMAIL_TEMPLATES['default'];
+    let builder = this.EMAIL_TEMPLATES[type];
+    if (!builder) builder = this.EMAIL_TEMPLATES['default'];
     return builder(payload);
   }
   //queue email

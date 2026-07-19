@@ -115,6 +115,10 @@ router.patch('/:id', requireAuth,loadContext, adminOnly,
     } else {
       delete invData.payment_history; // don't overwrite items with undefined
     }
+    if(req.body.total_amount){
+      invData.balance_due = invData.total_amount - invData.amount_paid
+      invData.status = invData.balance_due <= 0 ? 'paid' : invData.amount_paid > 0 ? 'partial' : invData.status;
+    }
   const [inv] = await db('invoices').where({ id: req.params.id }).update({...invData, created_by: req.user.id}).returning('*');
   res.json(inv);
 }));
