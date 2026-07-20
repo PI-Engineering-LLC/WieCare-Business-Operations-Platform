@@ -30,7 +30,7 @@ router.get('/', requireAuth, loadContext, resolveClientContext,
             //     this.orWhere('client_id', req.clientId);
             // }
             //
-            if (req.clientId && req.membership.roles.some(role => ['client_admin'].includes(role.name))) {
+            if (req.clientId && !req.query.recipient_id && req.membership.roles.some(role => ['client_admin'].includes(role.name))) {
                 this.orWhere('client_id', req.clientId);
             }
         });
