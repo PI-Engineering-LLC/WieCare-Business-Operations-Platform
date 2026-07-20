@@ -17,6 +17,7 @@ router.get('/', requireAuth,loadContext,resolveClientContext,
   asyncHandler( async (req, res) => {
   let q = db('invoices').orderBy('created_at', 'desc');
   if (req.query.client_id) q = q.where({ client_id: req.query.client_id });
+  if(!req.user.isInternalAdmin) q = q.whereNotIn('status', ['draft'])
   q = clientScope(q, req);
   let result;
   if (req.query.id) {
@@ -64,6 +65,7 @@ router.post('/', requireAuth,loadContext, adminOnly,
     created_by: req.user.id,
     invoice_number: `INV-${Date.now().toString().slice(-6)}`
   }).returning('*');
+  const client = await db('clients').where({ id: inv.client_id }).first();
   if (req.user.isInternalAdmin && (inv.status === 'sent' || inv.status === 'invoiced'  ) && inv.client_id) {
     await notificationService.notifyClientUsers({
         clientId: inv.client_id,
@@ -79,11 +81,12 @@ router.post('/', requireAuth,loadContext, adminOnly,
       });
     if(client) {
         await emailService.queue({ type: 'invoice_issue', to: client?.contact_email, payload: {
-            inv,
+          invoice: inv,
             client,
           } });
 
     }
+   
     
   }
 
@@ -120,6 +123,30 @@ router.patch('/:id', requireAuth,loadContext, adminOnly,
       invData.status = invData.balance_due <= 0 ? 'paid' : invData.amount_paid > 0 ? 'partial' : invData.status;
     }
   const [inv] = await db('invoices').where({ id: req.params.id }).update({...invData, created_by: req.user.id}).returning('*');
+  const client = await db('clients').where({ id: inv.client_id }).first();
+  console.log('@@@@@@@@@',inv.status)
+  if (req.user.isInternalAdmin && (inv.status !== 'sent' || inv.status !== 'paid'  ) && inv.client_id) {
+    await notificationService.notifyClientUsers({
+        clientId: inv.client_id,
+        email: client?.contact_email,
+        title: `Invoice ${inv.invoice_number || ''} Ready`,
+        message: `Your invoice "${inv.title}" for $${(inv.total_amount || 0).toLocaleString()} is now available in your portal.`,
+        type: 'info',
+        category: 'invoice',
+        link: `/Invoices?invoice_id=${inv.id}`,
+        is_email_sent: !!client?.contact_email,
+        resourceId: inv.id,
+        resourceType: "invoice"
+      });
+
+      if(client) {
+        await emailService.queue({ type: 'invoice_issue', to: client?.contact_email, payload: {
+            invoice: inv,
+            client,
+          } });
+
+    }
+    }
   res.json(inv);
 }));
 

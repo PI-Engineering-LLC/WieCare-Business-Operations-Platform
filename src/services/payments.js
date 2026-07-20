@@ -3,6 +3,7 @@ const db = require('../db');
 const axios = require('axios');
 const notificationService = require('../services/notifications.service');
 const { formatToStrict13 } = require('../utils/phone')
+const {getIO} = require('../config/socket')
 
 const BASE_URL = process.env.IPOSPAYS_SANDBOX === 'true'
   ? process.env.IPOSPAYS_SANDBOX_API_URL
@@ -431,7 +432,7 @@ class PaymentService {
 
             //Send notification and email
             let clientContactEmail = null;
-            let is_email_sent = true;
+            let is_email_sent = false;
             let client_id = inv.client_id;
             if (is_email_sent) {
               // Fetch the client's contact email if email sending is requested
@@ -516,19 +517,21 @@ class PaymentService {
 
   }
   async notifyClientOfPaymentFailure(invoiceId, amountPaid, responseCode, errResponseMessage) {
+    console.log("PayquerySData%%%7")
     const inv = await db('invoices').where({ id: invoiceId }).first();
+    console.log("PayquerySData%%%8")
     if (inv) {
 
       let clientContactEmail = null;
-      let is_email_sent = true;
+      let is_email_sent = false;
       let client_id = inv.client_id;
       if (is_email_sent) {
         // Fetch the client's contact email if email sending is requested
-        const client = await db('clients').where({ id: client_id }).select('contact_email').first();
+        const client = await db('clients').where({ id: inv.client_id }).select('contact_email').first();
         if (client) {
           clientContactEmail = client.contact_email;
         } else {
-          console.warn(`Client with ID ${client_id} not found for email notification.`);
+          console.warn(`Client with ID ${inv.client_id} not found for email notification.`);
         }
       }
 
@@ -537,13 +540,18 @@ class PaymentService {
         email: clientContactEmail, // Pass the contact email for the service to use
         title: 'Payment Error',
         message: `Payment of $${amountPaid.toFixed(2)} for invoice #${inv.invoice_number} not approved, no action taken. ${responseCode} ${errResponseMessage}`,
-        type: 'failure',
+        type: 'error',
         category: 'invoice',
         link: `/Invoices?invoice_id=${inv.id}`,
         isSendEmail: is_email_sent,
         resourceId: inv.id,
         resourceType: "invoice"
       });
+      await notificationService.notifyAllAdmins({ title: 'Payment Error', message: `Payment of $${amountPaid.toFixed(2)} for invoice #${inv.invoice_number} not approved, no action taken. ${responseCode} ${errResponseMessage}`, type: 'error', category: 'invoice', link: `/AdminInvoices?invoice_id=${inv.id}` })
+      // const io = getIO();
+      // if (io) {
+      //   io.to('admins').emit('notification:new', { title: 'Payment Error', message: `Payment of $${amountPaid.toFixed(2)} for invoice #${inv.invoice_number} not approved, no action taken. ${responseCode} ${errResponseMessage}`, type: 'error', category: 'invoice', link: `/AdminInvoices?invoice_id=${inv.id}` });
+      // }
     }
     return true;
 

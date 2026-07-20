@@ -34,6 +34,7 @@ router.get('/', requireAuth, loadContext, resolveClientContext,
                 this.orWhere('client_id', req.clientId);
             }
         });
+        clientScope(q, req)
     }
 
     // Apply is_read filter if present

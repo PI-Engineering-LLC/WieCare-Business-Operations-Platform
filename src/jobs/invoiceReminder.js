@@ -63,13 +63,13 @@ async function runOverDueClientsHold() {
 
     // 2. Identify overdue invoices
     const overdueInvoices = await db('invoices')
-        .where(function() {
+        .where(function () {
             this.where('issue_date', '<', cutoff)
                 .orWhere('due_date', '<', new Date());
         })
         .whereNotIn('status', ['paid', 'cancelled'])
         .select('client_id', 'id');
-        
+
     const invIds = [...new Set(overdueInvoices.map(i => i.id))];
     const clientIds = [...new Set(overdueInvoices.map(i => i.client_id))];
 
@@ -77,28 +77,29 @@ async function runOverDueClientsHold() {
     if (invIds.length) {
         await db('invoices').whereIn('id', invIds).update({ status: 'overdue' });
     }
-       
+
     if (clientIds.length) {
         await db('clients').whereIn('id', clientIds).update({ on_hold: true });
+        // Reset on_hold for clients NOT in the overdue list
+        await db('clients')
+            .whereNotIn('id', clientIds.length ? clientIds : ['none'])
+            .where({ on_hold: true })
+            .update({ on_hold: false });
     }
-    
-    // Reset on_hold for clients NOT in the overdue list
-    await db('clients')
-        .whereNotIn('id', clientIds.length ? clientIds : ['none'])
-        .where({ on_hold: true })
-        .update({ on_hold: false });
+
+
 }
 async function runInvoiceReminders() {
     const days = 3;
     const soon = new Date();
     soon.setDate(soon.getDate() + days);
-    
+
     const fiftySevenDaysFromNow = new Date();
     fiftySevenDaysFromNow.setDate(fiftySevenDaysFromNow.getDate() + 57);
 
     // 1. Fetch relevant invoices
     const invoices = await db('invoices')
-        .where(function() {
+        .where(function () {
             this.where('due_date', '=', soon)
                 .orWhere('issue_date', '=', fiftySevenDaysFromNow);
         })
@@ -117,32 +118,32 @@ async function runInvoiceReminders() {
         if (!client?.contact_email) continue;
 
         const title = `Invoice ${invoice.invoice_number} Due in ${days} Days - Payment Reminder`;
-        
+
         // Use 'let' to allow reassignment
         let emailMessage = `<p>Invoice <strong>${invoice.invoice_number}</strong> for <strong>$${(invoice.balance_due || 0).toLocaleString()}</strong> is due in ${days} days and unpaid.</p>
                        <p>Please remit payment to avoid your <a href='${process.env.FRONTEND_URL}'>account</a> being placed on hold.</p>`;
 
         emailMessage = `<h2>Invoice Reminder from ${invoice.sending_entity || 'Wiegand'}</h2><p>Dear ${client.contact_name || client.company_name},</p>${emailMessage}`;
-        
-        await emailService.queue({ 
-            type: 'invoice_reminder', 
-            to: client.contact_email, 
-            payload: { title, emailMessage } 
+
+        await emailService.queue({
+            type: 'invoice_reminder',
+            to: client.contact_email,
+            payload: { title, emailMessage }
         });
 
         const message = `Invoice ${invoice.invoice_number}for $${(invoice.balance_due || 0).toLocaleString()}is due in ${days} days and unpaid.`
 
-        notificationService.notifyClientUsers({ 
-            email: client.contact_email, 
-            clientId: client.id, 
-            type: 'reminder', 
-            category: 'invoice', 
+        notificationService.notifyClientUsers({
+            email: client.contact_email,
+            clientId: client.id,
+            type: 'reminder',
+            category: 'invoice',
             link: `/Invoices?invoice_id=${invoice.id}`,
-            title, 
+            title,
             message,
             is_email_sent: !!client?.contact_email,
             resourceId: invoice.id,
-            resourceType: "invoice_reminder" 
+            resourceType: "invoice_reminder"
         });
     }
 }
@@ -156,7 +157,7 @@ async function runInvoiceOverDue() {
         targetDate.setDate(now.getDate() - days);
 
         const invoices = await db('invoices')
-        .where('issue_date', '=', targetDate) 
+            .where('issue_date', '=', targetDate)
             .whereNotIn('status', ['paid', 'cancelled']);
 
         if (invoices.length === 0) continue;
@@ -176,25 +177,25 @@ async function runInvoiceOverDue() {
 
             emailMessage = `<h2>Invoice Overdue Reminder from ${invoice.sending_entity || 'Wiegand'}</h2><p>Dear ${client.contact_name || client.company_name},</p>${emailMessage}`;
 
-            await emailService.queue({ 
-                type: 'invoice_reminder', 
-                to: client.contact_email, 
-                payload: { title, emailMessage } 
+            await emailService.queue({
+                type: 'invoice_reminder',
+                to: client.contact_email,
+                payload: { title, emailMessage }
             });
             const message = `Invoice ${invoice.invoice_number}for $${(invoice.balance_due || 0).toLocaleString()} is ${days} days old and unpaid.<`
 
 
-            notificationService.notifyClientUsers({ 
-                email: client.contact_email, 
-                clientId: client.id, 
-                type: 'warning', 
-                category: 'invoice', 
+            notificationService.notifyClientUsers({
+                email: client.contact_email,
+                clientId: client.id,
+                type: 'warning',
+                category: 'invoice',
                 link: `/Invoices?invoice_id=${invoice.id}`,
-                title, 
+                title,
                 message,
                 is_email_sent: !!client?.contact_email,
                 resourceId: invoice.id,
-                resourceType: "invoice_reminder" 
+                resourceType: "invoice_reminder"
             });
         }
     }

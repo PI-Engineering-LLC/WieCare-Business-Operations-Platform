@@ -1,3 +1,4 @@
+require('dotenv').config();
 const router  = require('express').Router();
 const db       = require('../db');
 const requireAuth = require('../middleware/auth');
@@ -14,7 +15,45 @@ const {getIO} = require('../config/socket')
 const {formatToStrict13}= require('../utils/phone')
 const validateWebhook = require('../middleware/webhook');
 const PaymentService = require('../services/payments')
+const BASE_URL = process.env.IPOSPAYS_SANDBOX === 'true'
+  ? process.env.IPOSPAYS_SANDBOX_API_URL
+  : process.env.IPOSPAYS_API_URL
+const TPN = process.env.IPOSPAYS_SANDBOX === 'true'
+  ? process.env.IPOSPAYS_SANDBOX_TPN
+  : process.env.IPOSPAYS_SANDBOX_TPN;
+const AUTH_TOKEN = process.env.IPOSPAYS_SANDBOX === 'true'
+  ? process.env.IPOSPAYS_SANDBOX_AUTH_TOKEN
+  : process.env.IPOSPAYS_SANDBOX_AUTH_TOKEN;
 
+const QUERY_URL = process.env.IPOSPAYS_SANDBOX === 'true'
+  ? process.env.IPOSPAYS_SANDBOX_QUERY_URL
+  : process.env.IPOSPAYS_QUERY_URL
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
+
+
+const config = {
+  headers: {
+    // This is the Auth Token you generated in the portal
+    'token': AUTH_TOKEN,
+    'Content-Type': 'application/json'
+  }
+}
+// POS Config for API calls
+const POS_API_CONFIG = {
+  headers: {
+    'token': AUTH_TOKEN,
+    'Content-Type': 'application/json'
+  }
+};
+
+// Config for Query API (assuming different auth header as per your reconcilePaymentStatus)
+const POS_QUERY_CONFIG = {
+  headers: {
+    'Authorization': AUTH_TOKEN, // Or the correct header for query API
+    'token': AUTH_TOKEN,
+    'Content-Type': 'application/json'
+  }
+};
 //router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`, validateWebhook,
 router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
   auditMiddleware({action: 'payment.processed', resourceType:'payment'}),
@@ -30,9 +69,179 @@ router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
 
       try {
         console.log(`--- Webhook Received for Invoice: ${transactionReferenceId} ---`);
-        await PaymentService.reconcilePaymentStatus(transactionReferenceId,responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode, req.body );
+        // await PaymentService.reconcilePaymentStatus(transactionReferenceId,responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode, req.body );
+        console.log("PayquerySData%%%0", responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode,req.body)
+
+    const payment = await db('payments').where({ transactionReferenceId }).whereNotIn('status', ['completed']).first();
+    console.log("payment%%%1", payment)
+    if (!payment) {
+      // we still need to do an audit log of this attempt in the db so create a new payment
+      //   const statusData = await axios.get(`${QUERY_URL}`, {
+      //     params: { tpn: TPN, transactionReferenceId: transactionReferenceId }
+      // }, POS_QUERY_CONFIG);
+      // const statusData = await axios.get(QUERY_URL, {
+      //   headers: {
+      //     'Authorization': AUTH_TOKEN,
+      //     'Content-Type': 'application/json'
+      //   },
+      //   params: {
+      //     tpn: TPN,
+      //     transactionReferenceId: transactionReferenceId
+      //   }
+      // });
+
+      // const querySuccess = statusData.data.status
+      // console.log("querySuccess%%%1", querySuccess)
+      // const { responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode } = statusData.data.data;
+      console.log("querySData%%%1", responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode)
+      // const status = statusData.status
+      const reference = PaymentService.generatePaymentReference();
+      const method = 'ipospays'
+
+      const [orphanPayment] = await db('payments').insert({
+        amount: amount,
+        method,
+        transactionReferenceId: transactionReferenceId,
+        reference,
+        status: (responseCode === '200' || responseCode == 200) ? 'completed' : 'failed',
+        paid_at: (responseCode === '200' || responseCode == 200) ? new Date() : null,
+        raw_response: JSON.stringify(req.body)
+      })
+      const invoiceId = transactionReferenceId.split('--')[0].split('IN')[1];  //See if invoice can be found
+      const invoice = await db('invoices as i')
+        .where('i.id', invoiceId)
+        .leftJoin('clients as t', 't.id', 'i.client_id')
+        .select('i.*', 't.contact_phone', 't.contact_email')
+        .first();
+      if (invoice) {
+        await db('payments').where({ id: orphanPayment.id }).update({ invoice_id: invoice.id, client_id: invoice.client_id });
+
+      }
+      throw new Error('Payment record not found');
+    } else {
+      //Prevent double counting
+      if (payment.status === 'completed') return 'completed';
+      // const config = {
+      //   headers: {
+      //       // This is the Auth Token you generated in the portal
+      //       'Authorization': AUTH_TOKEN, 
+      //       'Content-Type': 'application/json'
+      //   }
+      // }
+      // 1. Fetch live status from POS
+      // const statusData = await axios.get(`${QUERY_URL}`, {
+      //     params: { tpn: TPN, transactionReferenceId: transactionReferenceId }
+      // }, POS_QUERY_CONFIG);
+      // const statusData = await axios.get(QUERY_URL, {
+      //   headers: {
+      //     'Authorization': AUTH_TOKEN,
+      //     'Content-Type': 'application/json'
+      //   },
+      //   params: {
+      //     tpn: TPN,
+      //     transactionReferenceId: transactionReferenceId
+      //   }
+      // });
+
+      // const querySuccess = statusData.data.status
+      // const { responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode } = statusData.data.data;
+      // const status = statusData.status
+      console.log("PayquerySData%%%1", responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode,req.body)
+
+      // 2. Map POS status to your DB status
+      let newStatus = 'pending';
+      if (responseCode == '200' || responseCode == 200) newStatus = 'completed';
+      else  newStatus = 'failed';
+      // else if (['Cancelled', 'Declined', 'Rejected'].includes(responseMessage)) newStatus = 'failed';
+      const invoiceId = payment.invoice_id
+      const amountPaid = parseFloat(amount) / 100;
+      if (newStatus === 'failed') {
+        console.log("PayquerySData%%%2")
+        await db('payments')
+          .where({ id: payment.id, transactionReferenceId })
+          .update({ amount: amountPaid, status: newStatus, raw_response: JSON.stringify(req.body) });
+          console.log("PayquerySData%%%3")
+        await PaymentService.notifyClientOfPaymentFailure(invoiceId, amountPaid, responseCode, errResponseMessage)
+        console.log("PayquerySData%%%4")
+         return res.status(200).send('OK');;
+      }
+      // 3. Update DB within transaction - can change txrefid to paymentid since payment includes invoice
+      
+      await db.transaction(async (trx) => {
+        const method = 'ipospays'
+        const reference = `PAY-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6)}`
+       
+
+        if (newStatus === 'completed') {
+          // Recalculate and update invoice...
+          const inv = await trx('invoices').where({ id: invoiceId }).first();
+          if (inv) {
+            const newPaid = parseFloat(amountPaid || 0);
+            const newBalance = parseFloat(inv.total_amount) - newPaid;
+            const paymentHistory = [...(inv.payment_history || []), {
+              date: new Date().toISOString().split('T')[0],
+              amountPaid: parseFloat(amountPaid),
+              method,
+              transactionReferenceId,
+              reference,
+              invoice_id: invoiceId,
+              status: newStatus
+            }];
+            
+            const newInvoiceStatus = newBalance <= 0 ? 'paid' : newPaid > 0 ? 'partial' : inv.status;
+
+            await trx('invoices').where({ id: invoiceId }).update({
+              amount_paid: newPaid,
+              balance_due: Math.max(0, newBalance),
+              payment_history: JSON.stringify(paymentHistory ?? []),
+              status: newInvoiceStatus,
+              updated_at: new Date(),
+            });
+
+            await trx('payments')
+              .where({ id: payment.id, transactionReferenceId })
+              .update({ amount: amountPaid, paid_at: new Date().toISOString().split('T')[0], status: newStatus, raw_response: JSON.stringify(req.body) });
+
+            //Send notification and email
+            let clientContactEmail = null;
+            let is_email_sent = false;
+            let client_id = inv.client_id;
+            if (is_email_sent) {
+              // Fetch the client's contact email if email sending is requested
+              const client = await db('clients').where({ id: client_id }).select('contact_email').first();
+              if (client) {
+                clientContactEmail = client.contact_email;
+              } else {
+                console.warn(`Client with ID ${client_id} not found for email notification.`);
+              }
+            }
+
+            const notifications = await notificationService.notifyClientUsers({
+              clientId: client_id,
+              email: clientContactEmail, // Pass the contact email for the service to use
+              title: 'Payment Received',
+              message: `Payment of $${amountPaid.toFixed(2)} received for invoice #${inv.invoice_number}`,
+              type: 'success',
+              category: 'invoice',
+              link: `/Invoices?invoice_id=${inv.id}`,
+              isSendEmail: is_email_sent,
+              resourceId: inv.id,
+              resourceType: "invoice"
+            });
+            await notificationService.notifyAllAdmins({ title: 'Payment Received', message: `Payment of $${amountPaid.toFixed(2)} received for invoice #${inv.invoice_number}`, type: 'success', category: 'invoice', link: `/AdminInvoices?invoice_id=${inv.id}` });
+                  
+      //       const io = getIO();
+      // if (io) {
+      //   io.to('admins').emit('notification:new', { title: 'Payment Received', message: `Payment of $${amountPaid.toFixed(2)} received for invoice #${inv.invoice_number}`, type: 'success', category: 'invoice', link: `/AdminInvoices?invoice_id=${inv.id}` });
+      // }
+          }
+        }
+      });
+
+       return res.status(200).send('OK');;
+    }
         
-        return res.status(200).send('OK');
+        // return res.status(200).send('OK');
   
       } catch (error) {
         // 1. Differentiate: "Record not found" is a permanent failure

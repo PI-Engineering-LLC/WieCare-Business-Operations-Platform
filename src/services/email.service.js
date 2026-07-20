@@ -1,29 +1,29 @@
 console.log('TRACE: services/email.service.js loaded.');
 require('dotenv').config();
-const { sendEmail } = require('../mailer'); 
-const { initializeAndStartBoss, getBossInstance }  = require('../jobs/boss');
+const { sendEmail } = require('../mailer');
+const { initializeAndStartBoss, getBossInstance } = require('../jobs/boss');
 
 class EmailService {
 
   // ── Template registry ──────────────────────────────────────────────
 
- EMAIL_TEMPLATES = {
-  quote_issue:          this.buildQuoteEmail.bind(this),
-  inspection_reminder:  this.buildInspectionReminderEmail.bind(this),
-  training_reminder:    this.buildTrainingReminderEmail.bind(this),
-  invoice_issue:        this.buildInvoiceEmail.bind(this),
-  invite:               this.buildInvitationEmail.bind(this),
-  reset:                this.buildResetEmail.bind(this),
-  notification:         this.buildNotificationEmail.bind(this),
-  invoice_reminder:     this.buildEmail.bind(this),
-  general:              this.buildEmail.bind(this),
-  default:              this.buildEmail.bind(this),
-};
+  EMAIL_TEMPLATES = {
+    quote_issue: this.buildQuoteEmail.bind(this),
+    inspection_reminder: this.buildInspectionReminderEmail.bind(this),
+    training_reminder: this.buildTrainingReminderEmail.bind(this),
+    invoice_issue: this.buildInvoiceEmail.bind(this),
+    invite: this.buildInvitationEmail.bind(this),
+    reset: this.buildResetEmail.bind(this),
+    notification: this.buildNotificationEmail.bind(this),
+    invoice_reminder: this.buildEmail.bind(this),
+    general: this.buildEmail.bind(this),
+    default: this.buildEmail.bind(this),
+  };
   // ── Template builders ──────────────────────────────────────────────
 
- buildQuoteEmail({ is_update, quote, client }) {
-  const itemsHtml = (quote.items || []).map(item => 
-    `<tr>
+  buildQuoteEmail({ is_update, quote, client }) {
+    const itemsHtml = (quote.items || []).map(item =>
+      `<tr>
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${item.item_number || '-'}</td>
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${item.ez_number || '-'}</td>
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${item.description || ''}</td>
@@ -31,20 +31,20 @@ class EmailService {
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">$${(item.unit_price || "0.00")}</td>
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">$${(item.total || "0.00")}</td>
         </tr>`
-  ).join('');
-  const discountLine = quote.discount_percent > 0
-        ? `<tr><td colspan="5" style="padding:4px 12px;text-align:right;color:#e53e3e">Discount (${quote.discount_percent}%)</td><td style="padding:4px 12px;text-align:right;color:#e53e3e">-$${(quote.subtotal * quote.discount_percent / 100).toLocaleString()}</td></tr>` : '';
-      const packingLine = quote.packing > 0
-        ? `<tr><td colspan="5" style="padding:4px 12px;text-align:right">Packing</td><td style="padding:4px 12px;text-align:right">$${quote.packing.toLocaleString()}</td></tr>` : '';
-      const exportLine = quote.export_declaration > 0
-        ? `<tr><td colspan="5" style="padding:4px 12px;text-align:right">Export Declaration</td><td style="padding:4px 12px;text-align:right">$${quote.export_declaration.toLocaleString()}</td></tr>` : '';
-      const taxLine = quote.tax_amount > 0
-        ? `<tr><td colspan="5" style="padding:4px 12px;text-align:right">Tax (${quote.tax_rate}%)</td><td style="padding:4px 12px;text-align:right">$${quote.tax_amount.toLocaleString()}</td></tr>` : '';
+    ).join('');
+    const discountLine = quote.discount_percent > 0
+      ? `<tr><td colspan="5" style="padding:4px 12px;text-align:right;color:#e53e3e">Discount (${quote.discount_percent}%)</td><td style="padding:4px 12px;text-align:right;color:#e53e3e">-$${(quote.subtotal * quote.discount_percent / 100).toLocaleString()}</td></tr>` : '';
+    const packingLine = quote.packing > 0
+      ? `<tr><td colspan="5" style="padding:4px 12px;text-align:right">Packing</td><td style="padding:4px 12px;text-align:right">$${quote.packing.toLocaleString()}</td></tr>` : '';
+    const exportLine = quote.export_declaration > 0
+      ? `<tr><td colspan="5" style="padding:4px 12px;text-align:right">Export Declaration</td><td style="padding:4px 12px;text-align:right">$${quote.export_declaration.toLocaleString()}</td></tr>` : '';
+    const taxLine = quote.tax_amount > 0
+      ? `<tr><td colspan="5" style="padding:4px 12px;text-align:right">Tax (${quote.tax_rate}%)</td><td style="padding:4px 12px;text-align:right">$${quote.tax_amount.toLocaleString()}</td></tr>` : '';
 
 
-  return {
-    subject: `${is_update ? '[Updated] ' : ''}Quote ${quote.quote_number || ''} from ${quote.sending_entity || 'Wiegand'} – ${quote.title}`,
-    html: `
+    return {
+      subject: `${is_update ? '[Updated] ' : ''}Quote ${quote.quote_number || ''} from ${quote.sending_entity || 'Wiegand'} – ${quote.title}`,
+      html: `
         <div style="font-family:sans-serif;max-width:680px;margin:0 auto;color:#1a202c">
           <div style="background:#1e3a5f;padding:24px 32px;border-radius:8px 8px 0 0">
             <h1 style="color:white;margin:0;font-size:22px">${is_update ? 'Updated Quote' : 'Quote'} from ${quote.sending_entity || 'Wiegand'}</h1>
@@ -75,81 +75,89 @@ class EmailService {
           </div>
         </div>
       `,
-  };
-}
+    };
+  }
 
- buildInspectionReminderEmail({ client, scheduled_date, year }) {
-  return {
-    subject: `Annual Inspection Reminder – ${year}`,
-    html: `
+  buildInspectionReminderEmail({ client, scheduled_date, year }) {
+    return {
+      subject: `Annual Inspection Reminder – ${year}`,
+      html: `
       <div style="font-family:sans-serif;max-width:680px;margin:0 auto">
         <h2>Annual Inspection Reminder</h2>
         <p>Dear ${client.name},</p>
         <p>This is a reminder that your annual inspection for <strong>${year}</strong> 
           ${scheduled_date ? `is scheduled for <strong>${scheduled_date}</strong>` : 'has not yet been scheduled'}.
         </p>
-        <p>Please log in to your portal to confirm or schedule your inspection.</p>
+        <p>Please <a href='${process.env.FRONTEND_URL}'>log in</a> to your portal to confirm or schedule your inspection.</p>
       </div>
     `,
-  };
-}
- buildTrainingReminderEmail({ client, scheduled_date, year }) {
-  return {
-    subject: `Annual Training Reminder – ${year}`,
-    html: `
+    };
+  }
+  buildTrainingReminderEmail({ client, scheduled_date, year }) {
+    return {
+      subject: `Annual Training Reminder – ${year}`,
+      html: `
       <div style="font-family:sans-serif;max-width:680px;margin:0 auto">
         <h2>Annual Training Reminder</h2>
         <p>Dear ${client.name},</p>
         <p>This is a reminder that your annual training for <strong>${year}</strong> 
           ${scheduled_date ? `is scheduled for <strong>${scheduled_date}</strong>` : 'has not yet been scheduled'}.
         </p>
-        <p>Please log in to your portal to confirm or schedule your training.</p>
+        <p>Please <a href='${process.env.FRONTEND_URL}'>log in</a> to your portal to confirm or schedule your training.</p>
       </div>
     `,
-  };
-}
- buildInvoiceEmail({ invoice, client }) {
+    };
+  }
+  buildInvoiceEmail({ invoice, client }) {
     const itemsHtml = (invoice.items || []).map(item => `
         <tr>
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${item.description || ''}</td>
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">${item.quantity}</td>
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">$${(item.unit_price || 0).toLocaleString()}</td>
         </tr>`
-      ).join('');
+    ).join('');
     return {
       subject: `Invoice ${invoice.invoice_number || ''} – ${invoice.title}`,
       html: `
         <div style="font-family:sans-serif;max-width:680px;margin:0 auto">
           <h2>Invoice from ${invoice.sending_entity || 'Wiegand'}</h2>
           <p>Dear ${client.contact_name || client.company_name},</p>
-          <p>Please find your invoice from ${invoice.sending_entity || 'Wiegand'} attached.</p>
+          <p>Please find your invoice from ${invoice.sending_entity || 'Wiegand'} is ready.</p>
           <p>Total: $${(invoice.total_amount || 0).toLocaleString()}</p>
-          <p>Please log in to your portal to view details.</p>
+          <p>Please <a href='${process.env.FRONTEND_URL}'>log in</a> to your portal to view details.</p>
         </div>
       `,
     };
   }
-   buildEmail({ title, message }) {
+  buildEmail({ title, message }) {
     return {
       subject: `${title || 'You have a new notification'}`,
-      html: `
-        <div style="font-family:sans-serif;max-width:680px;margin:0 auto">
-          ${message ||
-            `
-      <p>Hi,</p>
-      <p>You have a new notification. Please <a href='${process.env.FRONTEND_URL}'>log in</a>to the portal to view.</p>
-      
-    `
-          } 
+      html: `${message ? `
+         <div style="font-family:sans-serif;max-width:680px;margin:0 auto">
+     
+        <p>${message}<p/>
         </div>
-      `,
-      
+        ` :
+
+        `
+      <div style="font-family:sans-serif;max-width:680px;margin:0 auto">
+        
+    <p>Hi,</p>
+    <p>You have a new notification. Please <a href='${process.env.FRONTEND_URL}'>log in</a> to the portal to view.</p>
+    
+  
+      </div>
+    `
+
+        }`
+      ,
+
     };
   }
 
-   buildInvitationEmail({ inviteUrl, inviterName, inviterOrgName, inviterOrgCoaster}) {
+  buildInvitationEmail({ inviteUrl, inviterName, inviterOrgName, inviterOrgCoaster }) {
     return {
-      from: inviterOrgName? `${inviterOrgName} via Wiegand` : null ,
+      from: inviterOrgName ? `${inviterOrgName} via Wiegand` : null,
       subject: 'You\'ve been invited to Wiegand USA Customer Portal',
       html: `<p>Hello!</p>
 <p>
@@ -162,10 +170,10 @@ class EmailService {
     };
   }
 
-   buildResetEmail({ fullName, resetUrl}) {
+  buildResetEmail({ fullName, resetUrl }) {
     return {
       subject: 'Reset your WieCare password',
-    html: `
+      html: `
       <p>Hi ${fullName},</p>
       <p>Click the link below to reset your password. This link expires in 1 hour.</p>
       <a href="${resetUrl}" style="
@@ -176,47 +184,47 @@ class EmailService {
     `,
     };
   }
-   buildNotificationEmail(data) {
+  buildNotificationEmail(data) {
     return {
       subject: 'You have a new notification',
-    html: `
+      html: `
       <p>Hi,</p>
-      <p>You have a new notification. Please login to the portal to view.</p>
+      <p>You have a new notification. Please <a href='${process.env.FRONTEND_URL}'>log in</a> to the portal to view.</p>
       
     `,
     };
   }
 
 
-// ── Main dispatcher ────────────────────────────────────────────────
-  async send({to, type, payload}) {
-    const { subject, html, from } = this.renderTemplate(type, payload ) ;
-    console.log(subject,html)
-    await sendEmail({to, subject, body: html,from});
+  // ── Main dispatcher ────────────────────────────────────────────────
+  async send({ to, type, payload }) {
+    const { subject, html, from } = this.renderTemplate(type, payload);
+    console.log(subject, html)
+    await sendEmail({ to, subject, body: html, from });
   }
-  renderTemplate(type, payload ) {
+  renderTemplate(type, payload) {
     let builder = this.EMAIL_TEMPLATES[type];
     if (!builder) builder = this.EMAIL_TEMPLATES['default'];
     return builder(payload);
   }
   //queue email
- async  queue({ to, type, payload ,delaySeconds = 0}) {
-  const boss = await initializeAndStartBoss(); 
-  if (!boss) {
-    console.error("Attempted to queue email, but PgBoss failed to start or is not started after initializeAndStartBoss. Critical error.");
+  async queue({ to, type, payload, delaySeconds = 0 }) {
+    const boss = await initializeAndStartBoss();
+    if (!boss) {
+      console.error("Attempted to queue email, but PgBoss failed to start or is not started after initializeAndStartBoss. Critical error.");
       throw new Error("Email queuing service unavailable due to PgBoss startup failure.");
-   
-}
-  await boss.send(
-      'send-email', 
+
+    }
+    await boss.send(
+      'send-email',
       {
         to: to,
         type: type,
-        payload: payload 
+        payload: payload
       },
-      {startAfter:  delaySeconds > 0 ? new Date(Date.now() + delaySeconds * 1000) : undefined}
-  );
-}
-  
+      { startAfter: delaySeconds > 0 ? new Date(Date.now() + delaySeconds * 1000) : undefined }
+    );
+  }
+
 }
 module.exports = new EmailService();
