@@ -41,7 +41,7 @@ router.post('/setup-mfa', requireAuth, loadContext, asyncHandler(async (req, res
     length: 20,
   });
   const encryptedSecret = encrypt(secret.base32);
-  await db('users').where({ id: req.auth.userId }).update({
+  await db('users').where({ id: req.auth.userId , deleted_at: null  }).update({
     mfa_secret: encryptedSecret,
     mfa_enabled: false, // Remains false until verified
   });
@@ -353,7 +353,7 @@ router.post('/reset-password', asyncHandler(async (req, res) => {
   }
 
   const password_hash = await bcrypt.hash(password, 12);
-  await db('users').where({ id: reset.user_id }).update({ password_hash, force_password_reset: false, updated_at: new Date() });
+  await db('users').where({ id: reset.user_id , deleted_at: null }).update({ password_hash, force_password_reset: false, updated_at: new Date() });
 
   await db('password_resets').where({ id: reset.id }).update({ used_at: new Date(), updated_at: new Date() });
   res.json({ success: true });
@@ -469,7 +469,7 @@ router.get('/google/callback',
           }
           // Update platform role if invite had one
           if (matchedInvite.platform_role && user.platform_role !== matchedInvite.platform_role) {
-            await db('users').where({ id: user.id }).update({
+            await db('users').where({ id: user.id , deleted_at: null }).update({
               platform_role: matchedInvite.platform_role,
               is_verified: true,
               status: 'active',

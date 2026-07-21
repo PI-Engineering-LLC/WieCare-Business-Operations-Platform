@@ -1,12 +1,20 @@
-// Attach to queries to auto-filter client data
 module.exports = (query, req, field = 'client_id') => {
+  // 1. Internal Admins skip scoping entirely
   if (req.user.isInternalAdmin) return query;
-  //  Safeguard: Prevent Knex from crashing if clientId is missing
+
+  // 2. Safeguard: Client ID missing
   if (!req.clientId) {
-    console.error(`ERROR: Tenant filter failed. req.clientId is missing for route: ${req.originalUrl}`);
-    
-    // Force the query to return zero results safely, or throw an error
+    console.error(`ERROR: Client filter failed. req.clientId is missing for route: ${req.originalUrl}`);
     return query.whereRaw('1 = 0'); 
   }
-  return query.where({ [field]: req.clientId });
+
+  // 3. Filter by client_id AND verify client status
+  return query
+    .where({ [field]: req.clientId })
+    .whereExists(function() {
+      this.select('*')
+        .from('clients')
+        .where('clients.id', '=', `${req.clientId}`)
+        .where('clients.status', 'active');
+    });
 };

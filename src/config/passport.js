@@ -80,7 +80,7 @@ passport.use(new GoogleStrategy({
                 }).returning('*');
             } else {
               // Update existing user, link Google ID
-                await db('users').where({ id: user.id }).update({
+                await db('users').where({ id: user.id , deleted_at: null }).update({
                     status: 'active',
                     google_id: profile.id,
                     full_name: profile.displayName,

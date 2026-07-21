@@ -182,7 +182,7 @@ router.patch('/:id', requireAuth, loadContext, resolveClientContext,
         created_by: req.user.id,
         order_number: `ORD-${Date.now().toString().slice(-6)}`
       })
-      quote = await db('quotes').where({ id }).update({ status: 'converted' }).returning('*');
+      // quote = await db('quotes').where({ id }).update({ status: 'converted' }).returning('*');
     }
     res.json(quote);
   }));
