@@ -68,6 +68,7 @@ async function runOverDueClientsHold() {
                 .orWhere('due_date', '<', new Date());
         })
         .whereNotIn('status', ['paid', 'cancelled'])
+        .where('balance_due', '>', 0)
         .select('client_id', 'id');
 
     const invIds = [...new Set(overdueInvoices.map(i => i.id))];
@@ -103,7 +104,8 @@ async function runInvoiceReminders() {
             this.where('due_date', '=', soon)
                 .orWhere('issue_date', '=', fiftySevenDaysFromNow);
         })
-        .whereNotIn('status', ['paid', 'cancelled']);
+        .whereNotIn('status', ['paid', 'cancelled'])
+        .where('balance_due', '>', 0);
 
     if (invoices.length === 0) return;
 
@@ -158,7 +160,8 @@ async function runInvoiceOverDue() {
 
         const invoices = await db('invoices')
             .where('issue_date', '=', targetDate)
-            .whereNotIn('status', ['paid', 'cancelled']);
+            .whereNotIn('status', ['paid', 'cancelled'])
+            .where('balance_due', '>', 0);
 
         if (invoices.length === 0) continue;
 

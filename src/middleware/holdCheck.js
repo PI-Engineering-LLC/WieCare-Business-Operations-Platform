@@ -18,6 +18,7 @@ module.exports = async function holdCheck(req, res, next) {
         })
         .where('client_id', clientId)
         .whereNotIn('status', ['paid', 'cancelled'])
+        .where('balance_due', '>', 0)
   const invIds = [...new Set(overdueInvoices.map(i => i.id))];
   if (invIds.length) {
     await db('invoices').whereIn('id', invIds).update({ status: 'overdue' });
