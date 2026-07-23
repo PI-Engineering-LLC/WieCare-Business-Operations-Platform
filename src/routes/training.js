@@ -98,7 +98,7 @@ router.get('/registrations', requireAuth,loadContext,resolveClientContext,
   }));
   
 
-router.patch('/registrations/:id', requireAuth,loadContext, adminOnly,
+router.patch('/registrations/:id', requireAuth,loadContext,
   auditMiddleware({action: 'training_registration.updated', resourceType:'training_registration'}),
   asyncHandler(async (req, res) => {
   const [reg] = await db('training_registrations').where({ id: req.params.id }).update(req.body).returning('*');
