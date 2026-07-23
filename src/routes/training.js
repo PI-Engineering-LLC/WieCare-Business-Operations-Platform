@@ -31,7 +31,15 @@ router.get('/', requireAuth,loadContext,resolveClientContext,
 router.post('/', requireAuth,loadContext, adminOnly,
   auditMiddleware({action: 'training.created', resourceType:'training'}),
   asyncHandler( async (req, res) => {
-  const [session] = await db('training_sessions').insert(req.body).returning('*');
+    const trainingClientId= req.body.client_id;
+    const client = await db('clients').where({ id: trainingClientId}).first();
+
+  const [session] = await db('training_sessions').insert(
+    {
+      ...req.body,
+      coaster_name: client?.coaster_name ||''
+
+    }).returning('*');
   res.status(201).json(session);
 }));
 
