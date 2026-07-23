@@ -80,7 +80,8 @@ router.get('/', requireAuth, loadContext, requireRoles(['client_admin', 'super_a
         .from('client_memberships as cm_filter')
         .whereRaw('cm_filter.user_id = users.id')
         .where('cm_filter.client_id', client_id)
-        .where('cm_filter.is_active', true);
+        .where('cm_filter.is_active', true)
+        .where('c.status', 'active');
     });
   }
 

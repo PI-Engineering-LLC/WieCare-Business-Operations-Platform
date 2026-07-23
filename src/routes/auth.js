@@ -159,7 +159,32 @@ router.post('/verify-mfa', asyncHandler(async (req, res) => {
 
 router.post('/login', validate(loginSchema), asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  const user = await db('users').where({ email: email.toLowerCase(), deleted_at: null }).first();
+  // const user = await db('users').where({ email: email.toLowerCase(), deleted_at: null }).first();
+  const user = await db('users as u')
+  // Join memberships, but only if they are active themselves
+  .leftJoin('client_memberships as tm', function() {
+    this.on('tm.user_id', '=', 'u.id').andOn('tm.is_active', '=', db.raw('true'));
+  })
+  // Join the client record
+  .leftJoin('clients as t', 't.id', '=', 'tm.client_id')
+  // We don't filter by status here, or we'll lose the user entirely
+  .where({ 
+    'u.email': email.toLowerCase(), 
+    'u.deleted_at': null 
+  })
+  .orderByRaw("CASE WHEN t.status = 'active' THEN 0 ELSE 1 END")
+  .orderBy('t.id', 'asc')
+  .select('u.*', 't.status as client_status', 't.id as client_id')
+  .first();
+
+// NOW evaluate the business rules in JS
+// const isInternal = ['super_admin', 'internal_admin'].includes(user.platform_role);
+const isInternal = (user.platform_role ? true : false);
+const hasActiveClient = user.client_status === 'active';
+
+if (!isInternal && !hasActiveClient) {
+  return res.status(403).json({ error: `No active client access found ${isInternal} ${hasActiveClient} ${user.client_status}` });
+}
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
   if (!user.password_hash && user.status === 'active') {
@@ -176,7 +201,11 @@ router.post('/login', validate(loginSchema), asyncHandler(async (req, res) => {
   if (user.force_password_reset) {
     return res.json({ requiresPasswordReset: true });
   }
-
+  // --- Cache Invalidation ---
+  if (user) {
+    permissionCache.del(`user_client_permissions:${user.id}`);
+    console.log(`Invalidated permission cache for user ${user.id} due to log in.`);
+  }
   if (user.mfa_enabled) {
     const partialToken = jwt.sign(
       { userId: user.id, mfa_pending: true },

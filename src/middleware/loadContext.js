@@ -38,7 +38,7 @@ module.exports = async (req, res, next) => {
       .leftJoin('roles as r', 'r.id', 'mr.role_id')
       .leftJoin('role_permissions as rp', 'rp.role_id', 'r.id')
       .leftJoin('permissions as p', 'p.id', 'rp.permission_id')
-      .where({ 'cm.user_id': userId, 'cm.is_active': true })
+      .where({ 'cm.user_id': userId, 'cm.is_active': true , 'c.status': 'active'  })
       .select([
         'cm.id as membership_id',
         'cm.client_id',
