@@ -9,6 +9,9 @@ const clientScope = require('../middleware/clientScope');
 const asyncHandler = require('../middleware/asyncHandler');
 const auditMiddleware = require('../middleware/auditMiddleware');
 const holdCheck  = require('../middleware/holdCheck');
+const notificationService = require('../services/notifications.service');
+const emailService = require('../services/email.service' );
+const { getIO } = require('../config/socket');
 
 router.get('/', requireAuth,loadContext, resolveClientContext, 
   asyncHandler( async (req, res) => {
@@ -43,12 +46,49 @@ router.post('/', requireAuth,loadContext,resolveClientContext,holdCheck,
     created_by: req.user.id,
     request_number: `MR-${Date.now().toString().slice(-6)}`
   }).returning('*');
+  const title= 'New Maintenance Request';
+  const message= `A new ${mr.maintenance_type} request has been submitted by ${client?.company_name || 'a client'}`;
+   
+  await notificationService.notifyAllAdmins({
+            title,
+            message,
+            type: 'info',
+            category: 'maintenance',
+            resourceId: mr.id,
+            resourceType: "maintenance",
+            is_email_sent: true
+            // isSendEmail: true
+          })
+          const adminEmail = process.env.ADMIN_EMAIL
+                  if (adminEmail) {
+                    await emailService.queue({ to: adminEmail, type: "maintenance_request", payload: { title, message } });
+                }
   res.status(201).json(mr);
 }));
 router.patch('/:id', requireAuth,loadContext, adminOnly, 
   auditMiddleware({action: 'maintenance.updated', resourceType:'maintenance'}),
   asyncHandler( async (req, res) => {
   const [mr] = await db('maintenance_requests').where({ id: req.params.id }).update({...req.body,attachments: JSON.stringify(req.body.attachments ?? [])}).returning('*');
+  const client = await db('clients').where({ id: mr.client_id}).first();
+  await notificationService.notifyClientUsers({
+              clientId: mr.client_id,
+              email: client?.contact_email,
+              title: `Maintenance Update: ${mr.title || ''} `,
+              message: `Your maintenance request has been updated.`,
+              type: 'info',
+              category: 'maintenance',
+              link: `/Maintenance`,
+              is_email_sent: !!client?.contact_email,
+              resourceId: mr.id,
+              resourceType: "maintenance"
+            });
+          if(client) {
+              await emailService.queue({ type: 'maintenance_update', to: client?.contact_email, payload: {
+                maintenance: mr,
+                  client,
+                } });
+      
+          }
   res.json(mr);
 }));
 

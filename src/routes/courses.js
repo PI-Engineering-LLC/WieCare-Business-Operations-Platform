@@ -9,14 +9,15 @@ const clientScope = require('../middleware/clientScope');
 const asyncHandler = require('../middleware/asyncHandler');
 const auditMiddleware = require('../middleware/auditMiddleware');
 const { getSignedUrl: storageGetSignedUrl, deleteFile } = require('../storage');
+const { getIO } = require('../config/socket');
 
 
 // Courses
 router.get('/', requireAuth, loadContext, resolveClientContext,
   asyncHandler(async (req, res) => {
-    let q = db('courses').whereNot('status', 'archived').orderBy('order_index');
+    let q = db('courses').orderBy('order_index');
     if (req.query.status) q = q.where({ status: req.query.status });
-    if (!req.user.isInternalAdmin) q = q.where({ status: 'published' });
+    if (!req.user.isInternalAdmin) q = q.where({ status: 'published' }).whereNot('status', 'archived');
     let result;
     if (req.query.id) {
       result = await q.where({ id: req.query.id }).first();
@@ -69,6 +70,10 @@ router.post('/', requireAuth, loadContext, adminOnly,
   auditMiddleware({ action: 'course.created', resourceType: 'course' }),
   asyncHandler(async (req, res) => {
     const [course] = await db('courses').insert(req.body).returning('*');
+    const io = getIO();
+  if (io) {
+    io.emit('notification:new', { category:'course'})
+  }
     res.status(201).json(course);
   }));
 
@@ -92,15 +97,26 @@ router.patch('/:id', requireAuth, loadContext, resolveClientContext,
       }
     }
     const [course] = await db('courses').where({ id: req.params.id }).update(req.body).returning('*');
+    const io = getIO();
+  if (io) {
+    io.emit('notification:new', { category:'course'})
+  }
     res.json(course);
   }));
 
 router.delete('/:id', requireAuth, loadContext, adminOnly,
   auditMiddleware({ action: 'course.deleted', resourceType: 'course' }),
   asyncHandler(async (req, res) => {
+    // if (req.query && req.query['x-id']) {
+    //   console.log('CRITICAL: Vercel param x-id detected in route:', req.originalUrl);
+    // }
     const currentCourse = await db('courses').where({ id: req.params.id }).first();
     await deleteFile(currentCourse.thumbnail_storage_key);
     await db('courses').where({ id: req.params.id }).delete();
+    const io = getIO();
+  if (io) {
+    io.emit('notification:new', { category:'course'})
+  }
     res.json({ success: true });
   }));
 //All course progress
@@ -168,6 +184,10 @@ router.post('/:id/progress', requireAuth, loadContext, resolveClientContext,
         last_watched_at: new Date(),
       })
       .returning('*');
+      const io = getIO();
+  if (io) {
+    io.emit('notification:new', { category:'course'})
+  }
     res.json({ progress });
   }));
 
@@ -189,6 +209,10 @@ router.patch('/:cid/progress/:id', requireAuth, loadContext, resolveClientContex
         ...req.body
       })
       .returning('*');
+      const io = getIO();
+  if (io) {
+    io.emit('notification:new', { category:'course'})
+  }
 
     res.json(progress);
   }));

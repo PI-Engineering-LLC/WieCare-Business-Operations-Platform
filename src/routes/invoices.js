@@ -11,7 +11,7 @@ const auditMiddleware = require('../middleware/auditMiddleware');
 const { renderInvoicePDF } = require('../services/pdfRenderer');
 const notificationService = require('../services/notifications.service');
 const emailService = require('../services/email.service' );
-
+const { getIO } = require('../config/socket');
 
 router.get('/', requireAuth,loadContext,resolveClientContext, 
   asyncHandler( async (req, res) => {
@@ -153,8 +153,22 @@ router.patch('/:id', requireAuth,loadContext, adminOnly,
 router.delete('/:id', requireAuth,loadContext, adminOnly, 
   auditMiddleware({action: 'invoice.deleted', resourceType:'invoice'}),
   asyncHandler( async (req, res) => {
+    const invoice = await db('invoices')
+    .where({ id: req.params.id })
+    .select('client_id')
+    .first();
+
+  if (!invoice) {
+    return res.status(404).json({ error: 'Not found' });
+  }
     await db('invoices').where({ id: req.params.id }).delete();
-    res.json({ success: true });
+    const io = getIO();
+  if (io) {
+    // io.to(`client:${invoice.client_id }`).emit('notification:new', { category:'invoice'});
+    // io.to('admins').emit('notification:new', { category:'training'})
+    io.emit('notification:new', { category:'invoice'})
+  } 
+    res.json({ success: true }); 
   }));
 
   router.get('/invoices/:id/pdf', 

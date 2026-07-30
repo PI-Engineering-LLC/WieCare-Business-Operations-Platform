@@ -1,7 +1,7 @@
 require('dotenv').config();
 const db = require('../db');
 const emailService = require('./email.service');
-const { getIO } = require('../config/socket'); // Assuming this provides the Socket.IO instance
+const { getIO } = require('../config/socket');
 
 class NotificationService {
 

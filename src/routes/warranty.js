@@ -10,6 +10,9 @@ const adminOnly = require('../middleware/adminOnly');
 const clientScope = require('../middleware/clientScope');
 const asyncHandler = require('../middleware/asyncHandler');
 const auditMiddleware = require('../middleware/auditMiddleware');
+const notificationService = require('../services/notifications.service');
+const emailService = require('../services/email.service' );
+const { getIO } = require('../config/socket');
 
 router.get('/', requireAuth, loadContext, resolveClientContext,
   asyncHandler(async (req, res) => {
@@ -57,6 +60,23 @@ router.post('/', requireAuth, loadContext, resolveClientContext,
       created_by: req.user.id,
       claim_number: `WC-${Date.now().toString().slice(-6)}`
     }).returning('*');
+    const title= `Warranty Claim: ${claim.claim_number}`;
+      const message= `A new warranty claim has been submitted by ${client?.company_name || 'a client'}`;
+       
+      await notificationService.notifyAllAdmins({
+                title,
+                message,
+                type: 'info',
+                category: 'warranty',
+                resourceId: claim.id,
+                resourceType: "warranty",
+                is_email_sent: true
+                // isSendEmail: true
+              })
+              const adminEmail = process.env.ADMIN_EMAIL
+                      if (adminEmail) {
+                        await emailService.queue({ to: adminEmail, type: "warranty", payload: { title, message } });
+                    }
     res.status(201).json(claim);
   }));
 
@@ -67,6 +87,26 @@ router.patch('/:id', requireAuth, loadContext, adminOnly,
       ...req.body,
       images: JSON.stringify(req.body.images ?? []),
     }).returning('*');
+    const client = await db('clients').where({ id: claim.client_id}).first();
+  await notificationService.notifyClientUsers({
+              clientId: claim.client_id,
+              email: client?.contact_email,
+              title: `Warranty Claim Update: ${claim.claim_number || ''} `,
+              message: `Your warranty claim status has been updated .`,
+              type: 'info',
+              category: 'warranty',
+              link: `/WarrantyClaims`,
+              is_email_sent: !!client?.contact_email,
+              resourceId: claim.id,
+              resourceType: "warranty"
+            });
+          if(client) {
+              await emailService.queue({ type: 'warranty_update', to: client?.contact_email, payload: {
+                claim: claim,
+                  client,
+                } });
+      
+          }
     res.json(claim);
   }));
 

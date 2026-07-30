@@ -1,42 +1,40 @@
 const db = require('../db');
-const notificationService = require('../services/notifications.service'); 
-const emailService = require('../services/email.service' );
+const notificationService = require('../services/notifications.service');
+const emailService = require('../services/email.service');
 
 async function runTrainingReminders() {
-    const oneYearAgo = new Date();
-    const thisYear = oneYearAgo.getFullYear();
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-    const recentTrainings = await db('training_registrations as tr')
-    .leftJoin(
-        'training_sessions as t',
-        't.id',
-        'tr.training_id'
-    )
-    .where('tr.completion_date', '>', oneYearAgo)
-    .where('t.category', 'maintenance')
+  const oneYearAgo = new Date();
+  const thisYear = oneYearAgo.getFullYear();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  //TODO check that maintenance training request has not been created for ones that are not in recentTrainings
+  const recentTrainings = await db('training_sessions as tr')
+    .where('tr.category', 'maintenance')
+    .where('status', 'completed')
+    .where('tr.session_date', '<', oneYearAgo)
     .select('client_id');
-  
-    const trainings = recentTrainings.map(r => r.client_id);
-    const clients = await db('clients').where({ status: 'active' })
-      .whereNotIn('id', trainings.length ? trainings : ['none']);
-  
+  const trainings = recentTrainings.map(r => r.client_id);
+  const query = db('clients').where({ status: 'active' })
+  if (trainings && trainings.length > 0) {
+    query.whereNotIn('id', trainings);
+  }
+    const clients = await query;
+
     for (const c of clients) {
-        const title =`Annual Maintenance Training Due`
-        const message=`Your annual maintenance training is due. Please request or schedule training.`
+      const title = `Annual Maintenance Training Due`
+      const message = `Your annual maintenance training is due. Please request or schedule training.`
 
-        // const message=`<p>Hi ${c.contact_name || c.company_name},</p>
-        //          <p>Your annual maintenance training is due. Please log in to request or schedule training.</p>`
-  
       if (c?.contact_email) {
-        await emailService.queue({ type: 'training_reminder', to: c?.contact_email, payload: {       
-          client: c,
-          year: thisYear
-        } });
+        await emailService.queue({
+          type: 'training_reminder', to: c?.contact_email, payload: {
+            client: c,
+            year: thisYear
+          }
+        });
       }
-      notificationService.notifyClientUsers({email: c.contact_email,clientId: c.id, type:'reminder', category:'training', link: `/Training`, title, message, is_email_sent: !!c?.contact_email})
-      
+      notificationService.notifyClientUsers({ email: c.contact_email, clientId: c.id, type: 'reminder', category: 'training', link: `/Training`, title, message, is_email_sent: !!c?.contact_email })
+
     }
+  }
 
-}
 
-module.exports = {runTrainingReminders};
+module.exports = { runTrainingReminders };

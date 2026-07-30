@@ -10,6 +10,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const auditMiddleware = require('../middleware/auditMiddleware');
 const notificationService = require('../services/notifications.service'); // Corrected import
 const emailService = require('../services/email.service');
+const { getIO } = require('../config/socket');
 
 router.get('/', requireAuth, loadContext, resolveClientContext,
   asyncHandler(async (req, res) => {
@@ -190,7 +191,20 @@ router.delete('/:id', requireAuth, loadContext, adminOnly,
   auditMiddleware({ action: 'quote.deleted', resourceType: 'quote' }),
   asyncHandler(async (req, res) => {
     const { id } = req.params;
+    const quote = await db('quotes')
+    .where({ id})
+    .select('client_id')
+    .first();
+
+  if (!quote) {
+    return res.status(404).json({ error: 'Not found' });
+  }
     await db('quotes').where({ id }).delete();
+    const io = getIO();
+    if (io) {
+      io.to(`client:${quote.client_id }`).emit('notification:new', { category:'quote'});
+      // io.to('admins').emit('notification:new', { category:'training'})
+    } 
     res.json({ success: true });
   }));
 

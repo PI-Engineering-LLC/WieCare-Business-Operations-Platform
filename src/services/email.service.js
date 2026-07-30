@@ -9,9 +9,12 @@ class EmailService {
 
   EMAIL_TEMPLATES = {
     quote_issue: this.buildQuoteEmail.bind(this),
+    maintenance_update: this.buildMaintenanceUpdateEmail.bind(this),
     inspection_reminder: this.buildInspectionReminderEmail.bind(this),
     training_reminder: this.buildTrainingReminderEmail.bind(this),
+    training: this.buildTrainingCreatedEmail.bind(this),
     invoice_issue: this.buildInvoiceEmail.bind(this),
+    warranty_update: this.buildWarrantyUpdateEmail.bind(this),
     invite: this.buildInvitationEmail.bind(this),
     reset: this.buildResetEmail.bind(this),
     notification: this.buildNotificationEmail.bind(this),
@@ -84,12 +87,43 @@ class EmailService {
       html: `
       <div style="font-family:sans-serif;max-width:680px;margin:0 auto">
         <h2>Annual Inspection Reminder</h2>
-        <p>Dear ${client.name},</p>
+        <p>Dear ${client.contact_name || "Customer"},</p>
         <p>This is a reminder that your annual inspection for <strong>${year}</strong> 
           ${scheduled_date ? `is scheduled for <strong>${scheduled_date}</strong>` : 'has not yet been scheduled'}.
         </p>
         <p>Please <a href='${process.env.FRONTEND_URL}'>log in</a> to your portal to confirm or schedule your inspection.</p>
       </div>
+    `,
+    };
+  }
+  buildMaintenanceUpdateEmail({ maintenance, client}) {
+    const formattedDate = maintenance.scheduled_date 
+  ? new Date(maintenance.scheduled_date).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      timeZone: 'UTC' // Forces parsing exactly as stored without shifting zones
+    })
+  : '';
+    return {
+      subject: `Maintenance Update: ${maintenance.title}`,
+      html: `
+      <div style="font-family:sans-serif;max-width:680px;margin:0 auto;color:#1a202c">
+  <div style="background:#1e3a5f;padding:24px 32px;border-radius:8px 8px 0 0">
+    <h1 style="color:white;margin:0;font-size:22px">Maintenance Update: ${maintenance.title}</h1>
+  </div>
+  <div style="background:#f8fafc;padding:24px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0">
+  <p>Dear ${client.contact_name || "Customer"},</p>
+    <p>Your maintenance request has been updated.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">
+      <tr><td style="padding:6px 12px;font-weight:bold;border-bottom:1px solid #e2e8f0">New Status</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${maintenance.status}</td></tr>
+      ${formattedDate ? `<tr><td style="padding:6px 12px;font-weight:bold;border-bottom:1px solid #e2e8f0">Scheduled Date</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${formattedDate}</td></tr>` : ''}
+    </table>
+    ${maintenance.completion_notes ? `<p><strong>Completion Notes:</strong> ${maintenance.completion_notes}</p>` : ''}
+    <p>Please <a href='${process.env.FRONTEND_URL}'>log in</a> to your portal to review the request.</p>
+  </div>
+</div>
     `,
     };
   }
@@ -99,12 +133,34 @@ class EmailService {
       html: `
       <div style="font-family:sans-serif;max-width:680px;margin:0 auto">
         <h2>Annual Training Reminder</h2>
-        <p>Dear ${client.name},</p>
+        <p>Dear ${client.contact_name || "Customer"},</p>
         <p>This is a reminder that your annual training for <strong>${year}</strong> 
           ${scheduled_date ? `is scheduled for <strong>${scheduled_date}</strong>` : 'has not yet been scheduled'}.
         </p>
         <p>Please <a href='${process.env.FRONTEND_URL}'>log in</a> to your portal to confirm or schedule your training.</p>
       </div>
+    `,
+    };
+  }
+  buildTrainingCreatedEmail({ training, client}) {
+    return {
+      subject: `New Training Session – ${training.title}`,
+      html: `
+
+      <div style="font-family:sans-serif;max-width:680px;margin:0 auto;color:#1a202c">
+  <div style="background:#1e3a5f;padding:24px 32px;border-radius:8px 8px 0 0">
+    <h1 style="color:white;margin:0;font-size:22px">New Training Session: ${training.title}</h1>
+  </div>
+  <div style="background:#f8fafc;padding:24px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0">
+    <p>A new ${training.category} training session has been scheduled for <strong>${training.coaster_name}</strong>.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">
+      <tr><td style="padding:6px 12px;font-weight:bold;border-bottom:1px solid #e2e8f0">Date</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${training.session_date}</td></tr>
+      <tr><td style="padding:6px 12px;font-weight:bold;border-bottom:1px solid #e2e8f0">Time</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${training.start_time} - ${training.end_time}</td></tr>
+      <tr><td style="padding:6px 12px;font-weight:bold;border-bottom:1px solid #e2e8f0">Location</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${training.location}</td></tr>
+    </table>
+    <p>Please <a href='${process.env.FRONTEND_URL}'>log in</a> to your portal to view more details and register.</p>
+  </div>
+</div>
     `,
     };
   }
@@ -127,6 +183,25 @@ class EmailService {
           <p>Please <a href='${process.env.FRONTEND_URL}'>log in</a> to your portal to view details.</p>
         </div>
       `,
+    };
+  }
+  buildWarrantyUpdateEmail({ claim, client}) {
+    return {
+      subject: `Warranty Claim Update: ${claim.claim_number}`,
+      html: `
+<div style="font-family:sans-serif;max-width:680px;margin:0 auto;color:#1a202c">
+  <div style="background:#1e3a5f;padding:24px 32px;border-radius:8px 8px 0 0">
+    <h1 style="color:white;margin:0;font-size:22px">Warranty Claim Update: ${claim.claim_number}</h1>
+  </div>
+  <div style="background:#f8fafc;padding:24px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0">
+    <p>Your warranty claim status has been updated to: <strong>${claim.status}</strong></p>
+    ${claim.resolution ? `<p><strong>Resolution:</strong> ${claim.resolution}</p>` : ''}
+    ${claim.admin_notes ? `<p><strong>Admin Notes:</strong> ${claim.admin_notes}</p>` : ''}
+    <p>Please <a href='${process.env.FRONTEND_URL}'>log in</a> to your portal to review.</p>
+
+  </div>
+  </div>
+    `,
     };
   }
   buildEmail({ title, message }) {

@@ -324,6 +324,14 @@ router.post('/recordPayment', requireAuth,loadContext, adminOnly,
   //     .where({ id: invoice_id })
   //     .update({ status: 'paid', amount_paid: newTotalPaid, balance_due: balanceDue, status: newStatus});
   // }
+  // const io = getIO();
+  //         if (io) {
+  //           io.to(`client:${invoice.client_id}`).emit('notification:new', { clientId:invoice.client_id, title: "Test", message:'', type: 'reminder', category:'invoice'});
+  //         }
+  const io = getIO();
+  if (io) {
+    io.to(`client:${invoice.client_id}`).emit('notification:new', {   category:'invoice'});
+  }
 
   res.status(201).json({ payment , updatedInvoice});
 }));
