@@ -10,10 +10,10 @@ const BASE_URL = process.env.IPOSPAYS_SANDBOX === 'true'
   : process.env.IPOSPAYS_API_URL
 const TPN = process.env.IPOSPAYS_SANDBOX === 'true'
   ? process.env.IPOSPAYS_SANDBOX_TPN
-  : process.env.IPOSPAYS_SANDBOX_TPN;
+  : process.env.IPOSPAYS_TPN;
 const AUTH_TOKEN = process.env.IPOSPAYS_SANDBOX === 'true'
   ? process.env.IPOSPAYS_SANDBOX_AUTH_TOKEN
-  : process.env.IPOSPAYS_SANDBOX_AUTH_TOKEN;
+  : process.env.IPOSPAYS_AUTH_TOKEN; 
 
 const QUERY_URL = process.env.IPOSPAYS_SANDBOX === 'true'
   ? process.env.IPOSPAYS_SANDBOX_QUERY_URL
