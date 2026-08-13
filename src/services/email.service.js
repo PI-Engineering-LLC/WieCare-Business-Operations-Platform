@@ -12,7 +12,7 @@ class EmailService {
     maintenance_update: this.buildMaintenanceUpdateEmail.bind(this),
     inspection_reminder: this.buildInspectionReminderEmail.bind(this),
     training_reminder: this.buildTrainingReminderEmail.bind(this),
-    training: this.buildTrainingCreatedEmail.bind(this),
+    training_created: this.buildTrainingCreatedEmail.bind(this),
     invoice_issue: this.buildInvoiceEmail.bind(this),
     warranty_update: this.buildWarrantyUpdateEmail.bind(this),
     invite: this.buildInvitationEmail.bind(this),

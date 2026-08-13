@@ -144,6 +144,7 @@ router.post('/', requireAuth, loadContext, adminOnly,
       link,
       isSendEmail: is_email_sent
   });
+  
   const io = getIO();
   if (io) {
       io.emit('notification:new', { category:'notification'})

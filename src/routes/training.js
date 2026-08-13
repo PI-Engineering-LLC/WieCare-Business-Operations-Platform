@@ -56,7 +56,7 @@ router.post('/', requireAuth,loadContext, adminOnly,
             resourceType: "training_session"
           });
         if(client) {
-            await emailService.queue({ type: 'training', to: client?.contact_email, payload: {
+            await emailService.queue({ type: 'training_created', to: client?.contact_email, payload: {
               training: session,
                 client,
               } });
