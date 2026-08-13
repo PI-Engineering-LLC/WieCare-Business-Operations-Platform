@@ -275,7 +275,7 @@ class PaymentService {
         "customerMobile": formattedPhoneNo,
         "requestCardToken": true,
         "shortenURL": true,
-        "sendPaymentLink": true,
+        "sendPaymentLink": false,
       },
       "personalization": {
         // "logoUrl":'',
