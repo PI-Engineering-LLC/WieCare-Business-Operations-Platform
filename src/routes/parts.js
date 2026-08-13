@@ -14,6 +14,7 @@ const { initializeAndStartBoss, getBossInstance }  = require('../jobs/boss');
 const { s3Client, getSignedUrl, uploadFile, deleteFile } = require('../storage');
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl: getSignedUrlForUpload  } = require('@aws-sdk/s3-request-presigner');
+const { getIO } = require('../config/socket');
 
 
 /**client.on_hold
@@ -62,6 +63,12 @@ router.post('/', requireAuth,loadContext, adminOnly,
   auditMiddleware({action: 'part.created', resourceType:'part'}),
   asyncHandler( async (req, res) => {
   const [part] = await db('parts').insert(req.body).returning('*');
+  const io = getIO();
+      if (io) {
+          io.emit('notification:new', { category:'part'})
+        
+        io.to('admins').emit('notification:new', { category:'part'})
+      }
   res.status(201).json(part);
 }));
 router.post('/imports', 
@@ -91,8 +98,8 @@ router.post('/imports',
   // await getBoss().send('import-csv', { importId: importJob.id });
   const boss = await initializeAndStartBoss(); 
   if (!boss) {
-    console.error("Attempted to queue email, but PgBoss failed to start or is not started after initializeAndStartBoss. Critical error.");
-      throw new Error("Email queuing service unavailable due to PgBoss startup failure.");
+    console.error("Attempted to import parts, but PgBoss failed to start or is not started after initializeAndStartBoss. Critical error.");
+      throw new Error("Parts import service unavailable due to PgBoss startup failure.");
    
 }
 await boss.send('import-csv', { importId: importJob.id });
@@ -105,6 +112,12 @@ router.patch('/:id', requireAuth,loadContext, adminOnly,
   auditMiddleware({action: 'part.updated', resourceType:'part'}),
   asyncHandler( async (req, res) => {
   const [part] = await db('parts').where({ id: req.params.id }).update(req.body).returning('*');
+  const io = getIO();
+      if (io) {
+          io.emit('notification:new', { category:'part'})
+        
+        io.to('admins').emit('notification:new', { category:'part'})
+      }
   res.json(part);
 }));
 
@@ -112,6 +125,12 @@ router.delete('/:id', requireAuth,loadContext, adminOnly,
   auditMiddleware({action: 'part.deleted', resourceType:'part'}),
   asyncHandler( async (req, res) => {
   await db('parts').where({ id: req.params.id }).delete();
+  const io = getIO();
+      if (io) {
+          io.emit('notification:new', { category:'part'})
+        
+        io.to('admins').emit('notification:new', { category:'part'})
+      }
   res.json({ success: true });
 }));
 
@@ -144,6 +163,14 @@ router.post('/orders', requireAuth,loadContext,resolveClientContext,holdCheck,
     created_by: req.user.id,
     order_number: `PO-${Date.now().toString().slice(-6)}`
   }).returning('*');
+  const io = getIO();
+      if (io) {
+          io.emit('notification:new', { category:'part'})
+          io.emit('notification:new', { category:'order'})
+          io.to('admins').emit('notification:new', { category:'order'})
+        
+        io.to('admins').emit('notification:new', { category:'part'})
+      }
   res.status(201).json(po);
 }));
 
@@ -151,6 +178,14 @@ router.patch('/orders/:id', requireAuth,loadContext,resolveClientContext, adminO
   auditMiddleware({action: 'part_order.updated', resourceType:'part_order'}),
   asyncHandler( async (req, res) => {
   const [po] = await db('part_orders').where({ id: req.params.id }).update(req.body).returning('*');
+  const io = getIO();
+      if (io) {
+          io.emit('notification:new', { category:'part'})
+          io.emit('notification:new', { category:'order'})
+          io.to('admins').emit('notification:new', { category:'order'})
+        
+        io.to('admins').emit('notification:new', { category:'part'})
+      }
   res.json(po);
 }));
 

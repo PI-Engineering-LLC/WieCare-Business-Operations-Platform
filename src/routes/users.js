@@ -9,6 +9,7 @@ const auditMiddleware = require('../middleware/auditMiddleware');
 const requireRoles = require('../middleware/roles');
 const permissionCache = require('../lib/permissionsCache'); 
 const sanitizeUser = require('../utils/sanitizeUser');
+const { getIO } = require('../config/socket');
 
 // GET /api/users
 router.get('/', requireAuth, loadContext, requireRoles(['client_admin', 'super_admin', 'platform_admin']),
@@ -136,6 +137,12 @@ router.patch('/me', requireAuth,loadContext,
       delete updates.platform_role;
   }
   const [updatedUser] = await db('users').where({ id: req.user.id }).update({ ...updates, updated_at: new Date() }).returning('*');
+  const io = getIO();
+  if (io) {
+      io.emit('notification:new', { category:'user'})
+    
+    io.to('admins').emit('notification:new', { category:'user'})
+  }
   res.json(sanitizeUser(updatedUser));
 }));
 // GET /api/users/:id - Get single user details (more granular access)
@@ -211,7 +218,14 @@ router.post('/:id/clients/:clientId',
 
     permissionCache.del(`user_client_permissions:${user_id}`);
     console.log(`Invalidated permission cache for user ${user_id} due to adding to client ${client_id}`);
-
+    const io = getIO();
+  if (io) {
+    io.emit('notification:new', { category:'client'})
+      io.emit('notification:new', { category:'user'})
+      
+      io.to('admins').emit('notification:new', { category:'client'})
+    io.to('admins').emit('notification:new', { category:'user'})
+  }
     res.status(201).json({ message: 'User added to client and roles set.', membership });
 }));
 
@@ -252,7 +266,17 @@ router.put('/:id/clients/:clientId/roles',
 
     permissionCache.del(`user_client_permissions:${user_id}`);
     console.log(`Invalidated permission cache for user ${user_id} due to role update in client ${client_id}`);
-
+    const io = getIO();
+  if (io) {
+    io.emit('notification:new', { category:'role'})
+    io.emit('notification:new', { category:'client'})
+      io.emit('notification:new', { category:'user'})
+      
+      io.to('admins').emit('notification:new', { category:'role'})
+      io.to('admins').emit('notification:new', { category:'client'})
+    io.to('admins').emit('notification:new', { category:'user'})
+    
+  }
     res.json({ message: 'User roles updated in client.', membership_id: membership.id, role_ids: roleIds, status });
 }));
 
@@ -276,7 +300,15 @@ router.delete('/:id/clients/:clientId',
 
     permissionCache.del(`user_client_permissions:${user_id}`);
     console.log(`Invalidated permission cache for user ${user_id} due to removal from client ${client_id}`);
-
+    const io = getIO();
+    if (io) {
+      io.emit('notification:new', { category:'client'})
+        io.emit('notification:new', { category:'user'})
+        
+        io.to('admins').emit('notification:new', { category:'client'})
+      io.to('admins').emit('notification:new', { category:'user'})
+      
+    }
     res.json({ message: 'User removed from client.' });
 }));
 
@@ -333,7 +365,13 @@ router.patch('/:id',
     permissionCache.del(`user_client_permissions:${req.params.id}`);
     console.log(`Invalidated permission cache for user ${req.params.id} due to membership/role/platform_role update.`);
   }
-
+  const io = getIO();
+  if (io) {
+      io.emit('notification:new', { category:'user'})
+      
+    io.to('admins').emit('notification:new', { category:'user'})
+    
+  }
   res.json({
     success: true,
     id: req.params.id
@@ -353,7 +391,13 @@ router.delete('/:id',
 
   permissionCache.del(`user_client_permissions:${user_id_to_delete}`);
   console.log(`Invalidated permission cache for user ${user_id_to_delete} due to soft deletion.`);
-
+  const io = getIO();
+  if (io) {
+      io.emit('notification:new', { category:'user'})
+      
+    io.to('admins').emit('notification:new', { category:'user'})
+    
+  }
   res.json({ success: true });
 }));
 

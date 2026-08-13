@@ -6,7 +6,7 @@ const resolveClientContext = require('../middleware/resolveClientContext'); // U
 const asyncHandler = require('../middleware/asyncHandler');
 const requireRoles = require('../middleware/roles'); // Added
 const permissionCache = require('../lib/permissionsCache'); // Import cache instance
-
+const { getIO } = require('../config/socket');
 // GET /api/client_memberships
 router.get('/', requireAuth, loadContext, requireRoles(['client_admin', 'super_admin', 'platform_admin']),
   asyncHandler( async (req, res) => {
@@ -83,6 +83,15 @@ router.post('/', requireAuth, loadContext, requireRoles(['super_admin', 'platfor
       await db('membership_roles').insert(inserts);
     }
     permissionCache.del(`user_client_permissions:${user_id}`); // Invalidate cache for the affected user
+    const io = getIO();
+    if (io) {
+      io.emit('notification:new', { category:'role'})
+      io.emit('notification:new', { category:'client'})
+        io.emit('notification:new', { category:'user'})
+        io.to('admins').emit('notification:new', { category:'role'})
+        io.to('admins').emit('notification:new', { category:'client'})
+      io.to('admins').emit('notification:new', { category:'user'})
+    }
     res.status(201).json(membership);
   })
 );
@@ -103,6 +112,15 @@ router.delete('/:id', requireAuth, loadContext, requireRoles(['super_admin', 'pl
     if (deletedCount === 0) return res.status(404).json({ error: 'Membership not found' });
 
     permissionCache.del(`user_client_permissions:${membership.user_id}`); // Invalidate cache for the affected user
+    const io = getIO();
+    if (io) {
+      io.emit('notification:new', { category:'role'})
+      io.emit('notification:new', { category:'client'})
+        io.emit('notification:new', { category:'user'})
+        io.to('admins').emit('notification:new', { category:'role'})
+        io.to('admins').emit('notification:new', { category:'client'})
+      io.to('admins').emit('notification:new', { category:'user'})
+    }
     res.json({ message: 'Membership deleted successfully.' });
   })
 );

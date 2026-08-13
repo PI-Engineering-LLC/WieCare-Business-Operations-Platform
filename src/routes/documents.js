@@ -10,6 +10,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const auditMiddleware = require('../middleware/auditMiddleware');
 const requireRoles = require('../middleware/roles');
 const { getSignedUrl: storageGetSignedUrl, deleteFile } = require('../storage');
+const { getIO } = require('../config/socket');
 
 router.get('/', requireAuth, loadContext, resolveClientContext,
   asyncHandler(async (req, res) => {
@@ -19,7 +20,8 @@ router.get('/', requireAuth, loadContext, resolveClientContext,
       // Clients see: public docs matching their coaster, OR their own private docs
       q = q.where((builder) => {
         builder
-          .where({ is_public: true, coaster_name: req.membership.client.coaster_name })
+        .where({ is_public: true})
+          // .where({ is_public: true, coaster_name: req.membership.client.coaster_name })
           .orWhere({ client_id: req.clientId });
       });
     }
@@ -53,7 +55,8 @@ router.get('/:id/download', requireAuth, loadContext, resolveClientContext,
     }
     const documentId = doc.id
     // Determine the correct bucket based on the document's privacy status
-    const targetBucket = doc.is_private ? process.env.S3_PRIVATE_BUCKET : process.env.S3_PUBLIC_BUCKET;
+    // const targetBucket = doc.is_public ? process.env.S3_PUBLIC_BUCKET : process.env.S3_PRIVATE_BUCKET;
+    const targetBucket = process.env.S3_PRIVATE_BUCKET;
 
     if (!targetBucket) {
       // This indicates a server configuration issue if the bucket environment variable isn't set
@@ -95,11 +98,24 @@ router.get('/:id/download', requireAuth, loadContext, resolveClientContext,
 router.post('/', requireAuth, loadContext,
   auditMiddleware({ action: 'document.created', resourceType: 'document' }),
   asyncHandler(async (req, res) => {
+    const client_id = req.body.clientId === "" ? null : req.body.clientId
     const [doc] = await db('documents').insert({
       ...req.body,
+      client_id ,
       tags: JSON.stringify(req.body.tags ?? []),
       created_by: req.user.id
     }).returning('*');
+    const io = getIO();
+      if (io) {
+        if(client_id){
+          io.to(`client:${client_id }`).emit('notification:new', { category:'document'})
+        }else{
+          io.emit('notification:new', { category:'document'})
+        }
+        // io.to(`client:${invoice.client_id }`).emit('notification:new', { category:'document'});
+        io.to('admins').emit('notification:new', { category:'document'})
+        // io.emit('notification:new', { category:'document'})
+      }
     res.status(201).json(doc);
   }));
 
@@ -116,6 +132,18 @@ router.patch('/:id', requireAuth, loadContext, adminOnly,
       }
     }
     const [doc]= await db('documents').where({ id: req.params.id }).update({...newData,tags: JSON.stringify(req.body.tags ?? [])}).returning('*');
+    console.log("HERE@@@@@@@",newData,doc)
+    const io = getIO();
+      if (io) {
+        if(doc.client_id){
+          io.to(`client:${doc.client_id }`).emit('notification:new', { category:'document'})
+        }else{
+          io.emit('notification:new', { category:'document'})
+        }
+        // io.to(`client:${invoice.client_id }`).emit('notification:new', { category:'document'});
+        io.to('admins').emit('notification:new', { category:'document'})
+        // io.emit('notification:new', { category:'document'})
+      }
     res.json(doc);
   }));
 
@@ -125,6 +153,17 @@ router.delete('/:id', requireAuth, loadContext, adminOnly,
     const doc = await db('documents').where({ id: req.params.id }).first();
     await deleteFile(doc.file_storage_key, true); //All documents are private on r2, avatars are public
     await db('documents').where({ id: doc.id }).update({ status: 'archived' });
+    const io = getIO();
+      if (io) {
+        if(doc.client_id){
+          io.to(`client:${doc.client_id }`).emit('notification:new', { category:'document'})
+        }else{
+          io.emit('notification:new', { category:'document'})
+        }
+        // io.to(`client:${invoice.client_id }`).emit('notification:new', { category:'document'});
+        io.to('admins').emit('notification:new', { category:'document'})
+        // io.emit('notification:new', { category:'document'})
+      }
     res.json({ success: true });
   }));
 

@@ -8,7 +8,7 @@ const clientScope = require('../middleware/clientScope');
 const asyncHandler = require('../middleware/asyncHandler');
 const auditMiddleware = require('../middleware/auditMiddleware');
 const notificationService = require('../services/notifications.service'); // Using the service class
-
+const { getIO } = require('../config/socket');
 // GET /api/notifications — for current user
 router.get('/', requireAuth, loadContext, resolveClientContext,
   asyncHandler( async (req, res) => {
@@ -62,6 +62,12 @@ router.patch('/:id/read', requireAuth, loadContext, resolveClientContext,
   auditMiddleware({action: 'notification.marked_read', resourceType:'notification'}),
   asyncHandler(async (req, res) => {
   await db('notifications').where({ id: req.params.id, recipient_id: req.user.id }).update({ is_read: true, updated_at: db.fn.now() });
+  const io = getIO();
+    if (io) {
+        io.emit('notification:new', { category:'notification'})
+      
+      io.to('admins').emit('notification:new', { category:'notification'})
+    }
   res.json({ success: true });
 }));
 
@@ -70,6 +76,12 @@ router.post('/mark-all-read', requireAuth, loadContext, resolveClientContext,
   auditMiddleware({action: 'notification.marked_all_read', resourceType:'notification'}),
   asyncHandler( async (req, res) => {
   await db('notifications').where({ recipient_id: req.user.id, is_read: false }).update({ is_read: true, updated_at: db.fn.now() });
+  const io = getIO();
+    if (io) {
+        io.emit('notification:new', { category:'notification'})
+      
+      io.to('admins').emit('notification:new', { category:'notification'})
+    }
   res.json({ success: true });
 }));
 // DELETE /api/notifications/clear-read
@@ -77,6 +89,12 @@ router.delete('/clear-read', requireAuth, loadContext, resolveClientContext,
   auditMiddleware({action: 'notification.cleared_read', resourceType:'notification'}),
   asyncHandler( async (req, res) => {
   await db('notifications').where({ recipient_id: req.user.id, is_read: true }).delete();
+  const io = getIO();
+    if (io) {
+        io.emit('notification:new', { category:'notification'})
+      
+      io.to('admins').emit('notification:new', { category:'notification'})
+    }
   res.json({ success: true });
 }));
 // DELETE /api/notifications/:id
@@ -93,6 +111,12 @@ router.delete('/:id', requireAuth, loadContext, resolveClientContext,
   if (deletedCount === 0) return res.status(404).json({ error: 'Notification not found or not authorized' });
   
 
+    }
+    const io = getIO();
+    if (io) {
+        io.emit('notification:new', { category:'notification'})
+      
+      io.to('admins').emit('notification:new', { category:'notification'})
     }
   res.json({ success: true });
 }));
@@ -120,7 +144,12 @@ router.post('/', requireAuth, loadContext, adminOnly,
       link,
       isSendEmail: is_email_sent
   });
-
+  const io = getIO();
+  if (io) {
+      io.emit('notification:new', { category:'notification'})
+    
+    io.to('admins').emit('notification:new', { category:'notification'})
+  }
   res.status(201).json(notification);
 }));
 
@@ -155,7 +184,12 @@ router.post('/client', requireAuth, loadContext, adminOnly,
       link,
       isSendEmail: is_email_sent
   });
-
+  const io = getIO();
+  if (io) {
+      io.emit('notification:new', { category:'notification'})
+    
+    io.to('admins').emit('notification:new', { category:'notification'})
+  }
   res.status(201).json(notifications);
 }));
 

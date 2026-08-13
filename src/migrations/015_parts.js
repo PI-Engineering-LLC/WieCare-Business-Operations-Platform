@@ -31,7 +31,7 @@ exports.up = async (knex) => {
       t.text('admin_notes');
       t.date('estimated_delivery');
       t.string('tracking_number');
-      t.uuid('created_by').references('id').inTable('users').onDelete('CASCADE');;
+      t.uuid('created_by').references('id').inTable('users').onDelete('SET NULL');;
       t.timestamp('created_at').defaultTo(knex.fn.now());
       t.timestamp('updated_at').defaultTo(knex.fn.now());
     });

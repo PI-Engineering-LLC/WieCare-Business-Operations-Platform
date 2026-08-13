@@ -11,7 +11,7 @@ exports.up = (knex) => knex.schema.createTable('warranty_claims', (t) => {
     t.text('admin_notes');
     t.text('resolution');
     t.date('resolved_date');
-    t.uuid('created_by').references('id').inTable('users').onDelete('CASCADE');
+    t.uuid('created_by').references('id').inTable('users').onDelete('SET NULL');
     t.timestamp('created_at').defaultTo(knex.fn.now());
     t.timestamp('updated_at').defaultTo(knex.fn.now());
   });

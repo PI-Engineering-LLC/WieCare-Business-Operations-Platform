@@ -14,3 +14,22 @@ module.exports = function validate(schema) {
     next();
   };
 };
+// const validate = (schema) => (req, res, next) => {
+//   const result = schema.safeParse(req.body);
+  
+//   if (!result.success) {
+//     // This provides a detailed object format showing exactly which fields failed
+//     console.error("Zod Validation Error:", result.error.format());
+    
+//     return res.status(422).json({
+//       error: "Validation failed",
+//       details: result.error.format()
+//     });
+//   }
+  
+//   // Replace req.body with the parsed/coerced data
+//   req.body = result.data;
+//   next();
+// };
+
+// module.exports = { validate };

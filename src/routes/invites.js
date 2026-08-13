@@ -8,6 +8,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const inviteService = require('../services/invite');
 const requireRoles = require('../middleware/roles');
 const resolveClientContext = require('../middleware/resolveClientContext');
+const { getIO } = require('../config/socket');
 
 // POST /api/invites
 router.post('/', requireAuth, loadContext, resolveAuthContext, requireRoles(['client_admin', 'super_admin', 'platform_admin']),
@@ -58,6 +59,11 @@ router.post('/', requireAuth, loadContext, resolveAuthContext, requireRoles(['cl
       invitedBy: req.user.id,
       message: invited_by_message,
     });
+    const io = getIO();
+    if (io) {
+      io.emit('notification:new', { category:'invite'})
+        io.to('admins').emit('notification:new', { category:'invite'})
+    }
     await audit({ actorUserId: req.user.id, clientId: req.clientId, action: 'invite.created', resourceType: 'invite', resourceId: invite.id, metadata: { email, role_ids, platformRole }, req });
 
     res.json({ success: true });
@@ -140,6 +146,11 @@ router.get('/:id', requireAuth, loadContext, resolveClientContext,
 router.post('/:id/resend', requireAuth, loadContext, resolveClientContext,
   asyncHandler(async (req, res) => {
     const invite = await inviteService.resendInvite(req.params.id);
+    const io = getIO();
+    if (io) {
+      io.emit('notification:new', { category:'invite'})
+        io.to('admins').emit('notification:new', { category:'invite'})
+    }
     await audit({ actorUserId: req.user.id, clientId: req.clientId, action: 'invite.resent', resourceType: 'invite', resourceId: invite.id, metadata: { email: invite.email }, req });
     res.json({ message: 'Invite resent' });
   }));
@@ -148,6 +159,11 @@ router.post('/:id/resend', requireAuth, loadContext, resolveClientContext,
 router.post('/:id/revoke', requireAuth, loadContext, resolveClientContext,
   asyncHandler(async (req, res) => {
     const invite = await inviteService.revokeInvite(req.params.id);
+    const io = getIO();
+    if (io) {
+      io.emit('notification:new', { category:'invite'})
+        io.to('admins').emit('notification:new', { category:'invite'})
+    }
     await audit({ actorUserId: req.user.id, clientId: req.clientId, action: 'invite.resent', resourceType: 'invite', resourceId: invite.id, metadata: { email: invite.email }, req });
     res.json({ message: 'Invite revoked' });
   }));

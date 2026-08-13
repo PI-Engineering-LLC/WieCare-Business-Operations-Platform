@@ -17,7 +17,7 @@ exports.up = (knex) => knex.schema.createTable('maintenance_requests', (t) => {
     t.text('completion_notes');
     t.string('inspection_report_key');
     t.jsonb('attachments').defaultTo('[]');
-    t.uuid('created_by').references('id').inTable('users').onDelete('CASCADE');;
+    t.uuid('created_by').references('id').inTable('users').onDelete('SET NULL');;
     t.timestamp('created_at').defaultTo(knex.fn.now());
     t.timestamp('updated_at').defaultTo(knex.fn.now());
   });

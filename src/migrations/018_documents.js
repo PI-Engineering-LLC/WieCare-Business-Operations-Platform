@@ -13,7 +13,7 @@ exports.up = (knex) => knex.schema.createTable('documents', (t) => {
     t.boolean('is_public').defaultTo(true);
     t.jsonb('tags').defaultTo('[]');
     t.string('status').defaultTo('active');
-    t.uuid('created_by').references('id').inTable('users').onDelete('CASCADE');
+    t.uuid('created_by').references('id').inTable('users').onDelete('SET NULL');
     t.timestamp('created_at').defaultTo(knex.fn.now());
     t.timestamp('updated_at').defaultTo(knex.fn.now());
   });

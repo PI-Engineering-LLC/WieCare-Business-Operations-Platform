@@ -7,6 +7,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const auditMiddleware = require('../middleware/auditMiddleware');
 const permissionCache = require('../lib/permissionsCache'); // Import cache instance
 const resolveClientContext = require('../middleware/resolveClientContext');
+const { getIO } = require('../config/socket');
 
 // POST /api/roles
 router.post(
@@ -29,7 +30,12 @@ router.post(
     // --- Cache Invalidation ---
     permissionCache.flushAll(); // A new role can affect existing users if assigned
     console.log(`Flushed ALL permission cache entries due to new role '${name}' being created.`);
-
+    const io = getIO();
+    if (io) {
+        io.emit('notification:new', { category:'role'})
+      
+      io.to('admins').emit('notification:new', { category:'role'})
+    }
     res.status(201).json(role);
   })
 );
@@ -109,7 +115,12 @@ router.put('/:id/permissions',
     // --- Cache Invalidation ---
     permissionCache.flushAll(); // A change to role permissions affects all users assigned to this role
     console.log(`Flushed ALL permission cache entries due to role ${role_id} permissions being updated.`);
-
+    const io = getIO();
+    if (io) {
+        io.emit('notification:new', { category:'role'})
+      
+      io.to('admins').emit('notification:new', { category:'role'})
+    }
     res.json({ message: 'Role permissions updated.', role_id, permission_ids: permissionIds });
 }));
 
@@ -127,7 +138,12 @@ router.patch('/:id',
   // --- Cache Invalidation ---
   permissionCache.flushAll(); // A change to role name/description might affect UI or context
   console.log(`Flushed ALL permission cache entries due to role ${role.id} being updated.`);
-
+  const io = getIO();
+    if (io) {
+        io.emit('notification:new', { category:'role'})
+      
+      io.to('admins').emit('notification:new', { category:'role'})
+    }
   res.json(role);
 }));
 
@@ -157,7 +173,12 @@ router.delete('/:id',
     // --- Cache Invalidation ---
     permissionCache.flushAll(); // Deleting a role affects all users who had it
     console.log(`Flushed ALL permission cache entries due to role ${role_id_to_delete} being deleted.`);
-
+    const io = getIO();
+    if (io) {
+        io.emit('notification:new', { category:'role'})
+      
+      io.to('admins').emit('notification:new', { category:'role'})
+    }
     res.json({ message: 'Role deleted successfully.' });
 }));
 

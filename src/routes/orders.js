@@ -8,6 +8,7 @@ const adminOnly = require('../middleware/adminOnly');
 const clientScope = require('../middleware/clientScope');
 const asyncHandler = require('../middleware/asyncHandler');
 const auditMiddleware = require('../middleware/auditMiddleware');
+const { getIO } = require('../config/socket');
 
 // Orders
 router.get('/', requireAuth, loadContext, resolveClientContext,
@@ -36,6 +37,12 @@ router.post('/', requireAuth, loadContext, resolveClientContext,
       created_by: req.user.id,
       order_number: `ORD-${Date.now().toString().slice(-6)}`
     }).returning('*');
+    const io = getIO();
+    if (io) {
+        io.emit('notification:new', { category:'order'})
+      
+      io.to('admins').emit('notification:new', { category:'order'})
+    }
     res.status(201).json(order);
   }));
 
@@ -46,6 +53,12 @@ router.patch('/:id', requireAuth, loadContext, adminOnly,
       ...req.body,
       items: JSON.stringify(req.body.items ?? []),
     }).returning('*');
+    const io = getIO();
+    if (io) {
+        io.emit('notification:new', { category:'order'})
+      
+      io.to('admins').emit('notification:new', { category:'order'})
+    }
     res.json(order);
   }));
 
@@ -53,6 +66,12 @@ router.patch('/:id', requireAuth, loadContext, adminOnly,
 router.get('/:id/sub-orders', requireAuth, loadContext, resolveClientContext,
   asyncHandler(async (req, res) => {
     const subs = await db('sub_orders').where({ parent_order_id: req.params.id }).orderBy('created_at');
+    const io = getIO();
+    if (io) {
+        io.emit('notification:new', { category:'order'})
+      
+      io.to('admins').emit('notification:new', { category:'order'})
+    }
     res.json(subs);
   }));
 
@@ -68,6 +87,12 @@ router.post('/:id/sub-orders', requireAuth, loadContext, resolveClientContext, a
 
     // Mark parent as split
     await db('orders').where({ id: req.params.id }).update({ is_split: true });
+    const io = getIO();
+    if (io) {
+        io.emit('notification:new', { category:'order'})
+      
+      io.to('admins').emit('notification:new', { category:'order'})
+    }
     res.status(201).json(sub);
   }));
 
@@ -76,6 +101,12 @@ router.patch('/sub-orders/:id', requireAuth, loadContext, resolveClientContext, 
   asyncHandler(async (req, res) => {
     const [sub] = await db('sub_orders').where({ id: req.params.id }).update({...req.body,
       items: JSON.stringify(req.body.items ?? []),}).returning('*');
+      const io = getIO();
+    if (io) {
+        io.emit('notification:new', { category:'order'})
+      
+      io.to('admins').emit('notification:new', { category:'order'})
+    }
     res.json(sub);
   }));
 router.get('/sub-orders', requireAuth, loadContext, adminOnly,

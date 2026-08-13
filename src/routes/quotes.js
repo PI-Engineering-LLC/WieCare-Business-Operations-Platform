@@ -168,6 +168,25 @@ router.patch('/:id', requireAuth, loadContext, resolveClientContext,
         isSendEmail: true
       });
     }
+     // Notify admins when client requests modifications (status reverted to pending)
+     else if (updates.status !== existing.status && !req.user.isInternalAdmin ) {
+      await notificationService.notifyAllAdmins({
+        title: `Quote ${quote.title}. Status updated to ${quote.status}`,
+        message: `${quote.client_name || 'A client'} has updated the status on quote "${quote.title}" (${quote.quote_number || quote.id?.slice(-6)}): ${quote.notes}`,
+        type: 'warning',
+        category: 'quote',
+        link: `/AdminQuotes?quote_id=${quote.id}`,
+        resourceId:  quote.id,
+        resourceType: "quote",
+        // isSendEmail: true
+      });
+      const adminEmail = process.env.ADMIN_EMAIL
+                        if (adminEmail) {
+                          await emailService.queue({ to: adminEmail, type: "general", payload: { title: `Quote ${quote.title}. Status updated to ${quote.status}`,
+                             message: `${quote.client_name || 'A client'} has updated the status on quote "${quote.title}" (${quote.quote_number || quote.id?.slice(-6)}): ${quote.notes}`,
+                             } });
+                      }
+    }
 
     if (updates.status === 'approved') {
       await db('orders').insert({

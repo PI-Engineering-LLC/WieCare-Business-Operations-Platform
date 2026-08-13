@@ -9,6 +9,8 @@ const clientScope = require('../middleware/clientScope');
 const asyncHandler = require('../middleware/asyncHandler');
 const auditMiddleware = require('../middleware/auditMiddleware');
 const {uploadMiddleware} = require('../middleware/uploadMiddleWare');
+const { getIO } = require('../config/socket');
+
 
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl: getSignedUrlForUpload  } = require('@aws-sdk/s3-request-presigner');
@@ -72,13 +74,14 @@ router.post('/view-private', requireAuth,loadContext,resolveClientContext,
   asyncHandler( async (req, res) => {
   try {
     const clientId = req?.body.client_id || req?.clientId; 
+    
     const user = req.user; // Populated by your auth middleware
     const { fileKey } = req.body; // e.g., "tenant_abc123/users/user_987/id_docs/passport.pdf"
-
-    // 1. RBAC & Tenant Protection Guardrails
-    if (!(req.user.isInternalAdmin || fileKey.startsWith(`${clientId ? clientId + "/" : '' }public/`) || fileKey.startsWith(`${clientId ? clientId + "/" : '' }private/`) || fileKey.startsWith(`public`) || ( fileKey.includes(`/video/`)&& fileKey.startsWith(`private`)))) {
-      return res.status(403).json({ error: "Access denied: Tenant mismatch." });
-    }
+    // console.log("%%%%%%%",clientId, fileKey)
+    // // 1. RBAC & Tenant Protection Guardrails
+    // if (!(req.user.isInternalAdmin || fileKey.startsWith(`${clientId ? clientId + "/" : '' }public/`) || fileKey.startsWith(`${clientId ? clientId + "/" : '' }private/`) || fileKey.startsWith(`public`) || ( fileKey.includes(`/video/`)&& fileKey.startsWith(`private`)))) {
+    //   return res.status(403).json({ error: "Access denied: Tenant mismatch." });
+    // }
 
     //TODO Ensure the user owns this file, OR is an admin/authorized role
     const isOwner = fileKey.includes(`/users/user_${user.id}/`);
@@ -125,6 +128,12 @@ router.delete('/', requireAuth, loadContext, resolveClientContext, adminOnly, //
       }
       // Implement additional RBAC checks here if needed for deletion logic
       await deleteFile(fileKey, isPrivate);
+      const io = getIO();
+      if (io) {
+          io.emit('notification:new', { category:'document'})
+        
+        io.to('admins').emit('notification:new', { category:'document'})
+      }
       res.json({ message: `File ${fileKey} deleted successfully.` });
     } catch (error) {
       console.error('Error deleting file:', error);

@@ -96,6 +96,7 @@ async function getSignedUrl(key, expirySeconds = 3600, bucket) {
     bucket = key.includes('/private/') || key.includes('/documents/') ? PRIVATE_BUCKET : PUBLIC_BUCKET;
     if (!bucket) throw new Error('Bucket not specified and could not be inferred for signed URL.');
   }
+ 
   // 2. CHECK IF THE FILE ACTUALLY EXISTS IN R2 FIRST
   try {
     await s3Client.send(new HeadObjectCommand({
@@ -103,6 +104,7 @@ async function getSignedUrl(key, expirySeconds = 3600, bucket) {
       Key: key
     }));
   } catch (s3Error) {
+    console.error(s3Error)
     
     // If R2 returns a 404/NotFound error
     if (s3Error.name === "NotFound" || s3Error.$metadata?.httpStatusCode === 404) {

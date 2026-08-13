@@ -3,6 +3,7 @@ const axios = require('axios');
 const db = require('../db');
 const { parse } = require('csv-parse');
 const { getSignedUrl } = require('../storage');
+const { getIO } = require('../config/socket');
 
 const BATCH_SIZE = 500;
 
@@ -127,6 +128,11 @@ const processCsvImport = async (jobOrJobs) => {
     processed_rows: stats.processedCount,
     failed_rows: stats.failedCount
   });
+  const io = getIO();
+      if (io) {
+          io.emit('notification:new', { category:'part'})
+                io.to('admins').emit('notification:new', { category:'part'})
+      }
   return stats;
 };
 module.exports = { processCsvImport }

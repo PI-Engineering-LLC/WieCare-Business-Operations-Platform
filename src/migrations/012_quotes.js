@@ -7,8 +7,8 @@ exports.up = (knex) => knex.schema.createTable('quotes', (t) => {
     t.enu('sending_entity', ['Wiegand Sports Gmbh', 'Wiegand Services LLC'])
     t.string('title').notNullable();
     t.text('description');
-    t.uuid('maintenance_request_id').references('id').inTable('maintenance_requests').onDelete('CASCADE');;
-    t.uuid('training_request_id').references('id').inTable('training_requests').onDelete('CASCADE');;
+    t.uuid('maintenance_request_id').references('id').inTable('maintenance_requests').onDelete('SET NULL');;
+    t.uuid('training_request_id').references('id').inTable('training_requests').onDelete('SET NULL');;
     t.string('type')
     t.jsonb('items').defaultTo('[]');
     t.decimal('subtotal', 12, 2).defaultTo(0);
@@ -24,7 +24,7 @@ exports.up = (knex) => knex.schema.createTable('quotes', (t) => {
     t.text('notes');
     t.string('pdf_storage_key');
     t.uuid('converted_to_order_id');
-    t.uuid('created_by').references('id').inTable('users').onDelete('CASCADE');;
+    t.uuid('created_by').references('id').inTable('users').onDelete('SET NULL');;
     t.timestamp('created_at').defaultTo(knex.fn.now());
     t.timestamp('updated_at').defaultTo(knex.fn.now());
   });

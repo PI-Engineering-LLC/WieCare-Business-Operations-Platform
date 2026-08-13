@@ -7,6 +7,8 @@ const adminOnly = require('../middleware/adminOnly'); // Use adminOnly for globa
 const asyncHandler = require('../middleware/asyncHandler');
 const auditMiddleware = require('../middleware/auditMiddleware');
 const permissionCache = require('../lib/permissionsCache'); // Import cache instance
+const { getIO } = require('../config/socket');
+
 
 // POST /api/permissions
 router.post(
@@ -29,7 +31,12 @@ router.post(
     // --- Cache Invalidation ---
     permissionCache.flushAll(); // New permission could potentially affect any role, thus all users
     console.log(`Flushed ALL permission cache entries due to new permission '${resource}:${action}' being created.`);
-
+    const io = getIO();
+    if (io) {
+        io.emit('notification:new', { category:'permission'})
+      
+      io.to('admins').emit('notification:new', { category:'permission'})
+    }
     res.status(201).json(permission);
   })
 );

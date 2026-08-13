@@ -30,7 +30,7 @@ exports.up = (knex) => knex.schema.createTable('invoices', (t) => {
     t.jsonb('payment_history').defaultTo('[]');
     t.text('notes');
     t.string('pdf_storage_key');
-    t.uuid('created_by').references('id').inTable('users').onDelete('CASCADE');;
+    t.uuid('created_by').references('id').inTable('users').onDelete('SET NULL');;
     t.timestamp('created_at').defaultTo(knex.fn.now());
     t.timestamp('updated_at').defaultTo(knex.fn.now());
   });

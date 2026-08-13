@@ -44,7 +44,7 @@ exports.up = async (knex) => {
       t.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       t.uuid('client_id').notNullable().references('id').inTable('clients').onDelete('CASCADE');;
       t.string('client_name');
-      t.uuid('user_id').notNullable().references('id').inTable('users').onDelete('CASCADE');;
+      t.uuid('user_id').notNullable().references('id').inTable('users').onDelete('SET NULL');;
       t.string('user_name');
       t.string('user_email');
       t.string('training_type');

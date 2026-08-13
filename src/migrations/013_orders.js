@@ -4,7 +4,7 @@ exports.up = async (knex) => {
       t.string('order_number');
       t.uuid('client_id').notNullable().references('id').inTable('clients').onDelete('CASCADE');;
       t.string('client_name');
-      t.uuid('quote_id').references('id').inTable('quotes').onDelete('CASCADE');;
+      t.uuid('quote_id').references('id').inTable('quotes').onDelete('SET NULL');;
       t.string('title').notNullable();
       t.text('description');
       t.jsonb('items').defaultTo('[]');
@@ -14,7 +14,7 @@ exports.up = async (knex) => {
       t.boolean('is_split').defaultTo(false);
       t.string('tracking_number');
       t.text('notes');
-      t.uuid('created_by').references('id').inTable('users').onDelete('CASCADE');;
+      t.uuid('created_by').references('id').inTable('users').onDelete('SET NULL');;
       t.timestamp('created_at').defaultTo(knex.fn.now());
       t.timestamp('updated_at').defaultTo(knex.fn.now());
     });

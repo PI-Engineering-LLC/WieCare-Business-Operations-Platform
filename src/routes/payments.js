@@ -406,7 +406,12 @@ router.post('/:id/refund', requireAuth,loadContext, adminOnly,
     .where({ id: payment.invoice_id, status: 'paid' })
     .update({ status: 'sent'});
     // .update({ status: 'sent', paid_at: null, updated_at: new Date() });
-
+    const io = getIO();
+    if (io) {
+        io.emit('notification:new', { category:'invoice'})
+      
+      io.to('admins').emit('notification:new', { category:'invoice'})
+    }
   res.status(201).json({ refund });
   }))
 
