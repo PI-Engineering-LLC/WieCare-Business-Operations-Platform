@@ -46,6 +46,11 @@ const createInvoiceSchema = z.object({
   
     // Items processing (mapped to invoice_line_items)
     items: z.array(z.object({
+      line: z.coerce.number().optional(),
+      item_number: z.string().optional(),
+      ez_number: z.string().optional(),
+      amount: z.coerce.number().nonnegative(),
+      total: z.coerce.number().nonnegative(),
       description: z.string().min(1),
       quantity: z.coerce.number().positive(),
       unit_price: z.coerce.number().nonnegative(),
@@ -74,6 +79,11 @@ const createInvoiceSchema = z.object({
       z.uuid().nullable().optional()
     ),
     items: z.array(z.object({
+        line: z.coerce.number().optional(),
+      item_number: z.string().optional(),
+      ez_number: z.string().optional(),
+      amount: z.coerce.number().nonnegative(),
+      total: z.coerce.number().nonnegative(),
         description: z.string().min(1),
         quantity: z.coerce.number().positive(),
         unit_price: z.coerce.number().nonnegative(),
