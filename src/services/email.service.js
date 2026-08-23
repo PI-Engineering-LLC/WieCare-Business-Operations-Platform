@@ -247,7 +247,7 @@ class EmailService {
 
   buildResetEmail({ fullName, resetUrl }) {
     return {
-      subject: 'Reset your WieCare password',
+      subject: 'Reset your Wiegand Customer Portal password',
       html: `
       <p>Hi ${fullName},</p>
       <p>Click the link below to reset your password. This link expires in 1 hour.</p>

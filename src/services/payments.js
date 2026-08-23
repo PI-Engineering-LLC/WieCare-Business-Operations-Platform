@@ -195,7 +195,8 @@ class PaymentService {
     } else {
       const amountInCents = Math.round(paymentAmount * 100);
       // const transactionReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
-      const transactionNewReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
+      // const transactionNewReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
+      const transactionNewReferenceId = `IN${invoiceId}`
       const reference = this.generatePaymentReference();
       const method = 'ipospays'
       const paymentLinkInfo = await this.getPaymentLink(paymentAmount, invoiceId, invoice.invoice_number, transactionNewReferenceId, expiryDays, invoice.contact_email, invoice.contact_phone)
@@ -339,7 +340,8 @@ class PaymentService {
         paid_at: (responseCode === '200' || responseCode == 200) ? new Date() : null,
         raw_response: JSON.stringify(reqBody)
       })
-      const invoiceId = transactionReferenceId.split('--')[0].split('IN')[1];  //See if invoice can be found
+      const invoiceId = transactionReferenceId.split('IN')[1]; 
+      // const invoiceId = transactionReferenceId.split('--')[0].split('IN')[1];  //See if invoice can be found
       const invoice = await db('invoices as i')
         .where('i.id', invoiceId)
         .leftJoin('clients as t', 't.id', 'i.client_id')

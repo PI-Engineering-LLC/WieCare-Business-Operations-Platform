@@ -1,4 +1,5 @@
 const router = require('express').Router();
+// const db = require('../db');
 const { s3Client, getSignedUrl, deleteFile } = require('../storage');
 const requireAuth = require('../middleware/auth');
 const loadContext = require('../middleware/loadContext');
@@ -23,6 +24,16 @@ router.post('/', requireAuth,loadContext,resolveClientContext,
   asyncHandler( async(req, res) => {
   try{
   const clientId = req?.clientId; 
+  let coaster_name =''
+  if(clientId){
+    const membership = req.user.memberships.find(m => m.clientId === clientId)
+    if(membership){
+      coaster_name = membership.client?.coaster_name
+    }
+    // const client = await db('clients').where({ id: clientId }).first();
+    // coaster_name = client?.coaster_name
+  }
+  
   const user = req.user;
   const { filename, contentType, type, isPrivate } = req.body;
   if (!filename || !contentType) {
@@ -36,10 +47,10 @@ router.post('/', requireAuth,loadContext,resolveClientContext,
   let targetBucket;
   if (type === 'thumbnail' || !isPrivate) {
     targetBucket = process.env.S3_PUBLIC_BUCKET;
-    uniqueKey = !!clientId? `${clientId}/public/users/user_${user.id}/${type || 'public'}_${uniqueId}${fileExtension}`: `public/users/user_${user.id}/${type || 'public'}_${uniqueId}${fileExtension}`;
+    uniqueKey = (!!clientId && !!coaster_name)? `${coaster_name}_${clientId}/public/${type || 'general'}/users/user_${user.id}/${uniqueId}${fileExtension}`: `public/${type || 'public'}/users/user_${user.id}/${uniqueId}${fileExtension}`;
   } else{
     targetBucket = process.env.S3_PRIVATE_BUCKET;
-    uniqueKey = !!clientId?  `${clientId}/private/users/user_${user.id}/${type || 'documents'}/id_${uniqueId}${fileExtension}` : `private/users/user_${user.id}/${type || 'documents'}/id_${uniqueId}${fileExtension}`;
+    uniqueKey = (!!clientId && !!coaster_name)?  `${coaster_name}_${clientId}/private/${type || 'documents'}/users/user_${user.id}/id_${uniqueId}${fileExtension}` : `private/${type || 'documents'}/users/user_${user.id}/id_${uniqueId}${fileExtension}`;
   }
   if (!targetBucket) {
     throw new Error(`Configuration Error: Target bucket for ${isPrivate ? 'private' : 'public'} files is not set.`);
