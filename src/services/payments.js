@@ -196,7 +196,8 @@ class PaymentService {
       const amountInCents = Math.round(paymentAmount * 100);
       // const transactionReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
       // const transactionNewReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
-      const transactionNewReferenceId = `IN${invoiceId}`
+      const transactionNewReferenceId = `IN${Date.now().toString(36)}`
+      console.log("%%%%%%%%%%%%%%%%",transactionNewReferenceId)
       const reference = this.generatePaymentReference();
       const method = 'ipospays'
       const paymentLinkInfo = await this.getPaymentLink(paymentAmount, invoiceId, invoice.invoice_number, transactionNewReferenceId, expiryDays, invoice.contact_email, invoice.contact_phone)
