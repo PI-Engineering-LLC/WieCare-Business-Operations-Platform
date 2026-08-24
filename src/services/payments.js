@@ -156,6 +156,7 @@ class PaymentService {
           await db('payments').where({ id: payment.id }).update({ status: 'failed', link_expires_at: now });
           // const transactionId = `IN${invoiceId}--${Date.now().toString(36)}` 
           const transactionId = `IN${nanoid(10)}`
+          console.log("transactionId",transactionId)
           const reference = this.generatePaymentReference();
           const method = 'ipospays'
           const paymentLinkInfo = await this.getPaymentLink(paymentAmount, invoiceId, invoice.invoice_number, transactionId, expiryDays, invoice.contact_email, invoice.contact_phone)
