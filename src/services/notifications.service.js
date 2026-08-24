@@ -42,6 +42,7 @@ class NotificationService {
         const users = await db('client_memberships as cm')
           .leftJoin('users as u', 'u.id', 'cm.user_id')
           .where({ 'cm.client_id': clientId })
+          .where({ 'u.deleted_at': null })
           .whereNot({ 'u.status': 'inactive' })
           .select([
             'u.id as user_id',

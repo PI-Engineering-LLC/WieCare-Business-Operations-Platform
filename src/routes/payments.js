@@ -169,8 +169,8 @@ router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
       
       await db.transaction(async (trx) => {
         const method = 'ipospays'
-        const reference = `PAY-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6)}`
-       
+        // const reference = `PAY-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.random().toString(36).slice(2, 6)}`
+        const reference = PaymentService.generatePaymentReference()
 
         if (newStatus === 'completed') {
           // Recalculate and update invoice...
@@ -178,22 +178,22 @@ router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
           if (inv) {
             const newPaid = parseFloat(amountPaid || 0);
             const newBalance = parseFloat(inv.total_amount) - newPaid;
-            const paymentHistory = [...(inv.payment_history || []), {
-              date: new Date().toISOString().split('T')[0],
-              amountPaid: parseFloat(amountPaid),
-              method,
-              transactionReferenceId,
-              reference,
-              invoice_id: invoiceId,
-              status: newStatus
-            }];
+            // const paymentHistory = [...(inv.payment_history || []), {
+            //   date: new Date().toISOString().split('T')[0],
+            //   amountPaid: parseFloat(amountPaid),
+            //   method,
+            //   transactionReferenceId,
+            //   reference,
+            //   invoice_id: invoiceId,
+            //   status: newStatus
+            // }];
             
             const newInvoiceStatus = newBalance <= 0 ? 'paid' : newPaid > 0 ? 'partial' : inv.status;
 
             await trx('invoices').where({ id: invoiceId }).update({
               amount_paid: newPaid,
               balance_due: Math.max(0, newBalance),
-              payment_history: JSON.stringify(paymentHistory ?? []),
+              // payment_history: JSON.stringify(paymentHistory ?? []),
               status: newInvoiceStatus,
               updated_at: new Date(),
             });
@@ -228,12 +228,13 @@ router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
               resourceId: inv.id,
               resourceType: "invoice"
             });
-            await notificationService.notifyAllAdmins({ title: 'Payment Received', message: `Payment of $${amountPaid.toFixed(2)} received for invoice #${inv.invoice_number}`, type: 'success', category: 'invoice', link: `/AdminInvoices?invoice_id=${inv.id}` });
+            // await notificationService.notifyAllAdmins({ title: 'Payment Received', message: `Payment of $${amountPaid.toFixed(2)} received for invoice #${inv.invoice_number}`, type: 'success', category: 'invoice', link: `/AdminInvoices?invoice_id=${inv.id}` });
                   
-      //       const io = getIO();
-      // if (io) {
-      //   io.to('admins').emit('notification:new', { title: 'Payment Received', message: `Payment of $${amountPaid.toFixed(2)} received for invoice #${inv.invoice_number}`, type: 'success', category: 'invoice', link: `/AdminInvoices?invoice_id=${inv.id}` });
-      // }
+            const io = getIO();
+      if (io) {
+        io.to('admins').emit('notification:new', { category:'invoice'})
+        // io.to('admins').emit('notification:new', { title: 'Payment Received', message: `Payment of $${amountPaid.toFixed(2)} received for invoice #${inv.invoice_number}`, type: 'success', category: 'invoice', link: `/AdminInvoices?invoice_id=${inv.id}` });
+      }
           }
         }
       });
