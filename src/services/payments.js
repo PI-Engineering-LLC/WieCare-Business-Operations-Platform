@@ -564,7 +564,7 @@ class PaymentService {
         resourceType: "invoice"
       });
       // await notificationService.notifyAllAdmins({ title: 'Payment Error', message: `Payment of $${amountPaid.toFixed(2)} for invoice #${inv.invoice_number} not approved, no action taken. ${responseCode} ${errResponseMessage}`, type: 'error', category: 'invoice', link: `/AdminInvoices?invoice_id=${inv.id}` })
-      // const io = getIO();
+      const io = getIO();
       if (io) {
         io.to('admins').emit('notification:new', { category:'invoice'})
         // io.to('admins').emit('notification:new', { title: 'Payment Error', message: `Payment of $${amountPaid.toFixed(2)} for invoice #${inv.invoice_number} not approved, no action taken. ${responseCode} ${errResponseMessage}`, type: 'error', category: 'invoice', link: `/AdminInvoices?invoice_id=${inv.id}` });
