@@ -4,7 +4,7 @@ const axios = require('axios');
 const notificationService = require('../services/notifications.service');
 const { formatToStrict13 } = require('../utils/phone')
 const {getIO} = require('../config/socket')
-const { nanoid } = require('nanoid');
+// const { nanoid } = require('nanoid');
 
 const BASE_URL = process.env.IPOSPAYS_SANDBOX === 'true'
   ? process.env.IPOSPAYS_SANDBOX_API_URL
@@ -45,6 +45,15 @@ const POS_QUERY_CONFIG = {
     'Content-Type': 'application/json'
   }
 };
+function generateReferenceId() {
+  // Convert current millisecond timestamp to Base36 (~8 characters)
+  const timePart = Date.now().toString(36);
+  //  Generate 5 random alphanumeric characters using Base36
+  const randomPart = Math.random().toString(36).substring(2, 7);
+
+  // ombine and return as uppercase (Total: ~13 characters)
+  return (timePart + randomPart).toUpperCase();
+}
 
 class PaymentService {
   async checkPaymentLink(invoiceId) {
@@ -155,7 +164,7 @@ class PaymentService {
           //payment failed but did not hit. Generate new link? Sometimes it failed but got completed after
           await db('payments').where({ id: payment.id }).update({ status: 'failed', link_expires_at: now });
           // const transactionId = `IN${invoiceId}--${Date.now().toString(36)}` 
-          const transactionId = `IN${nanoid(10)}`
+          const transactionId = `IN${generateReferenceId()}`
           console.log("transactionId",transactionId)
           const reference = this.generatePaymentReference();
           const method = 'ipospays'
@@ -185,7 +194,7 @@ class PaymentService {
       } else {
         console.log(" payment exists,  not completed, link is not active... expired at is null")
         // const txReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
-        const txReferenceId = `IN${nanoid(10)}`
+        const txReferenceId = `IN${generateReferenceId()}`
       
         const paymentLinkInfo = await this.getPaymentLink(paymentAmount, invoiceId, invoice.invoice_number, payment.transactionReferenceId, expiryDays, invoice.contact_email, invoice.contact_phone)
         console.log("%%%", paymentLinkInfo)
@@ -200,7 +209,7 @@ class PaymentService {
       const amountInCents = Math.round(paymentAmount * 100);
       // const transactionReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
       // const transactionNewReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
-      const transactionNewReferenceId = `IN${nanoid(10)}`
+      const transactionNewReferenceId = `IN${generateReferenceId()}`
       console.log("%%%%%%%%%%%%%%%%",transactionNewReferenceId)
       const reference = this.generatePaymentReference();
       const method = 'ipospays'
@@ -345,17 +354,17 @@ class PaymentService {
         paid_at: (responseCode === '200' || responseCode == 200) ? new Date() : null,
         raw_response: JSON.stringify(reqBody)
       })
-      const invoiceId = transactionReferenceId.split('IN')[1]; 
-      // const invoiceId = transactionReferenceId.split('--')[0].split('IN')[1];  //See if invoice can be found
-      const invoice = await db('invoices as i')
-        .where('i.id', invoiceId)
-        .leftJoin('clients as t', 't.id', 'i.client_id')
-        .select('i.*', 't.contact_phone', 't.contact_email')
-        .first();
-      if (invoice) {
-        await db('payments').where({ id: orphanPayment.id }).update({ invoice_id: invoice.id, client_id: invoice.client_id });
+      // const invoiceId = transactionReferenceId.split('IN')[1]; 
+      // // const invoiceId = transactionReferenceId.split('--')[0].split('IN')[1];  //See if invoice can be found
+      // const invoice = await db('invoices as i')
+      //   .where('i.id', invoiceId)
+      //   .leftJoin('clients as t', 't.id', 'i.client_id')
+      //   .select('i.*', 't.contact_phone', 't.contact_email')
+      //   .first();
+      // if (invoice) {
+      //   await db('payments').where({ id: orphanPayment.id }).update({ invoice_id: invoice.id, client_id: invoice.client_id });
 
-      }
+      // }
       throw new Error('Payment record not found');
     } else {
       //Prevent double counting

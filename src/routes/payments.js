@@ -107,16 +107,16 @@ router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
         paid_at: (responseCode === '200' || responseCode == 200) ? new Date() : null,
         raw_response: JSON.stringify(req.body)
       })
-      const invoiceId = transactionReferenceId.split('--')[0].split('IN')[1];  //See if invoice can be found
-      const invoice = await db('invoices as i')
-        .where('i.id', invoiceId)
-        .leftJoin('clients as t', 't.id', 'i.client_id')
-        .select('i.*', 't.contact_phone', 't.contact_email')
-        .first();
-      if (invoice) {
-        await db('payments').where({ id: orphanPayment.id }).update({ invoice_id: invoice.id, client_id: invoice.client_id });
+      // const invoiceId = transactionReferenceId.split('--')[0].split('IN')[1];  //See if invoice can be found
+      // const invoice = await db('invoices as i')
+      //   .where('i.id', invoiceId)
+      //   .leftJoin('clients as t', 't.id', 'i.client_id')
+      //   .select('i.*', 't.contact_phone', 't.contact_email')
+      //   .first();
+      // if (invoice) {
+      //   await db('payments').where({ id: orphanPayment.id }).update({ invoice_id: invoice.id, client_id: invoice.client_id });
 
-      }
+      // }
       throw new Error('Payment record not found');
     } else {
       //Prevent double counting
