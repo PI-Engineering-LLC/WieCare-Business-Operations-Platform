@@ -4,6 +4,7 @@ const axios = require('axios');
 const notificationService = require('../services/notifications.service');
 const { formatToStrict13 } = require('../utils/phone')
 const {getIO} = require('../config/socket')
+const { nanoid } = require('nanoid');
 
 const BASE_URL = process.env.IPOSPAYS_SANDBOX === 'true'
   ? process.env.IPOSPAYS_SANDBOX_API_URL
@@ -153,7 +154,8 @@ class PaymentService {
           console.log('failed payment. geerate new link',response.data.data)
           //payment failed but did not hit. Generate new link? Sometimes it failed but got completed after
           await db('payments').where({ id: payment.id }).update({ status: 'failed', link_expires_at: now });
-          const transactionId = `IN${invoiceId}--${Date.now().toString(36)}`
+          // const transactionId = `IN${invoiceId}--${Date.now().toString(36)}` 
+          const transactionId = `IN${nanoid(10)}`
           const reference = this.generatePaymentReference();
           const method = 'ipospays'
           const paymentLinkInfo = await this.getPaymentLink(paymentAmount, invoiceId, invoice.invoice_number, transactionId, expiryDays, invoice.contact_email, invoice.contact_phone)
@@ -181,7 +183,8 @@ class PaymentService {
         return ({ payment_url: payment.link });
       } else {
         console.log(" payment exists,  not completed, link is not active... expired at is null")
-        const txReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
+        // const txReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
+        const txReferenceId = `IN${nanoid(10)}`
       
         const paymentLinkInfo = await this.getPaymentLink(paymentAmount, invoiceId, invoice.invoice_number, payment.transactionReferenceId, expiryDays, invoice.contact_email, invoice.contact_phone)
         console.log("%%%", paymentLinkInfo)
@@ -196,7 +199,7 @@ class PaymentService {
       const amountInCents = Math.round(paymentAmount * 100);
       // const transactionReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
       // const transactionNewReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
-      const transactionNewReferenceId = `IN${Date.now().toString(36)}`
+      const transactionNewReferenceId = `IN${nanoid(10)}`
       console.log("%%%%%%%%%%%%%%%%",transactionNewReferenceId)
       const reference = this.generatePaymentReference();
       const method = 'ipospays'
