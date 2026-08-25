@@ -74,7 +74,26 @@ class NotificationService {
           }
 
           if (isSendEmail && email) { // Send email ONLY to the provided contact email
-              await emailService.queue({ to: email, type: category, payload: { title, message, link } });
+            const CHUNK_SIZE = 1000; // Best size for most email APIs
+    let emailBatch = [];
+
+    for  (const user of users) {
+      emailBatch.push(user.email);
+
+      //  Once the chunk is full, push the array to the queue
+      if (emailBatch.length === CHUNK_SIZE) {
+        await emailService.queue({ to: emailBatch, type: category, payload: { title, message, link } });
+        emailBatch = []; // Reset the array
+      }
+    }
+
+    // Queue any remaining users left in the last batch
+    if (emailBatch.length > 0) {
+      await emailService.queue({ to: emailBatch, type: category, payload: { title, message, link } });
+
+   
+    }
+              // await emailService.queue({ to: email, type: category, payload: { title, message, link } });
           }
           return notifications;
         }
