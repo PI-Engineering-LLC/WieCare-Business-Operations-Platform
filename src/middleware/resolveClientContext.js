@@ -14,7 +14,7 @@ module.exports = (req, res, next) => {
   }
 
   // Find the membership for the specified clientId
-  const membership = req.user.memberships.find(m => m.clientId === clientId); // assumes loadContext has been run
+  const membership = req.user.memberships.find(m => (m.clientId === clientId && !m.client.deleted_at)); // assumes loadContext has been run
 
   if (!membership) {
     return res

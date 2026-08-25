@@ -115,7 +115,13 @@ router.get('/status', requireAuth, loadContext, resolveClientContext,
     // .count('id as count')
     // .first();
     const [userResult, inviteResult] = await Promise.all([
-      db('users').where({ client_id: clientId, deleted_at: null  }).count('id as count').first(),
+      db('users')
+      .whereNull('users.deleted_at')
+          .join('client_memberships as cm', 'cm.user_id', 'users.id')
+          .join('clients as c', 'c.id', 'cm.client_id')
+          .where('cm.client_id', clientId)
+      // .where({ client_id: clientId, deleted_at: null  })
+      .count('id as count').first(),
       db('invites').where({ client_id: clientId }).whereNull('accepted_at').where('expires_at', '>', new Date()).count('id as count').first()
     ]);
     const currentUsage = parseInt(userResult.count) + parseInt(inviteResult.count);

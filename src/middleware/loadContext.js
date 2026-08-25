@@ -39,12 +39,14 @@ module.exports = async (req, res, next) => {
       .leftJoin('role_permissions as rp', 'rp.role_id', 'r.id')
       .leftJoin('permissions as p', 'p.id', 'rp.permission_id')
       .where({ 'cm.user_id': userId, 'cm.is_active': true })
+      .whereNull('c.deleted_at')
       .select([
         'cm.id as membership_id',
         'cm.client_id',
         'c.company_name',
         'c.coaster_name',
         'c.on_hold',
+        'c.deleted_at',
         'r.id as role_id',
         'r.name as role_name',
         'p.resource',
@@ -63,7 +65,8 @@ module.exports = async (req, res, next) => {
               id: row.client_id,
               company_name: row.company_name,
               coaster_name: row.coaster_name,
-              on_hold: row.on_hold
+              on_hold: row.on_hold,
+              deleted_at: row.deleted_at
             },
             roles: [],
             permissions: new Set()

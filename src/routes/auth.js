@@ -22,6 +22,7 @@ const validate = require('../middleware/validate');
 const { z } = require('zod');
 const passport = require('../config/passport');
 const permissionCache = require('../lib/permissionsCache');
+const { getIO } = require('../config/socket');
 
 // ─── Validation Schemas ───
 const signupSchema = z.object({
@@ -355,6 +356,11 @@ router.post('/accept-invite', validate(signupSchema), asyncHandler(async (req, r
     permissionCache.del(`user_client_permissions:${user.id}`);
     console.log(`Invalidated permission cache for user ${user.id} due to invite acceptance.`);
   }
+  const io = getIO();
+        if (io) {
+          io.emit('notification:new', { category:'invite'})
+          io.emit('notification:new', { category:'user'})
+        }
 
   res.json({ success: true, nextStep: "login", requireLogin: "true", message: 'Account activated. Please log in.' });
 }));

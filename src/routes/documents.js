@@ -99,7 +99,7 @@ router.post('/', requireAuth, loadContext,
   auditMiddleware({ action: 'document.created', resourceType: 'document' }),
   asyncHandler(async (req, res) => {
     const client_id = req.body.clientId === "" ? null : req.body.clientId
-    const client = await db('clients').where({ id: client_id }).first();
+    const client = await db('clients').where({ id: client_id, status: 'active' }).first();
     const [doc] = await db('documents').insert({
       ...req.body,
       client_id ,

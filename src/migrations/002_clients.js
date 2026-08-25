@@ -27,5 +27,6 @@ exports.up = (knex) => knex.schema.createTable('clients', (t) => {
     t.string('notes');
     t.timestamp('created_at').defaultTo(knex.fn.now());
     t.timestamp('updated_at').defaultTo(knex.fn.now());
+    t.timestamp('deleted_at').nullable()
   });
   exports.down = (knex) => knex.schema.dropTable('clients');

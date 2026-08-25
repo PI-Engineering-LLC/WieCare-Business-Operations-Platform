@@ -20,9 +20,12 @@ module.exports = async function holdCheck(req, res, next) {
         .whereNotIn('status', ['paid', 'cancelled'])
         .where('balance_due', '>', 0)
   const invIds = [...new Set(overdueInvoices.map(i => i.id))];
+  const clientIds = [...new Set(overdueInvoices.map(i => i.client_id))];
   if (invIds.length) {
     await db('invoices').whereIn('id', invIds).update({ status: 'overdue' });
-    await db('clients').whereIn('id', clientId).update({ on_hold: true });
+}
+if (clientIds.length) {
+  await db('clients').whereIn('id', clientIds).update({ on_hold: true });
 }
 
 

@@ -22,14 +22,14 @@ const { getIO } = require('../config/socket');
     return res.status(403).json({ message: 'This part is on hold due to overdue invoice' });
   } */
 // Parts catalog
-router.get('/', requireAuth,loadContext,resolveClientContext,adminOnly,
+router.get('/', requireAuth,loadContext,resolveClientContext,
   asyncHandler( async (req, res) => {
 
   let q = db('parts').orderBy('name');
   if (req.query.status) q = q.where({ status: req.query.status });
   if (req.query.category) q = q.where({ category: req.query.category });
   
-    q = clientScope(q, req);
+    // q = clientScope(q, req);
     let result;
   if (req.query.id) {
     result = await q.where({ id: req.query.id }).first();

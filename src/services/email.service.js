@@ -31,18 +31,18 @@ class EmailService {
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${item.ez_number || '-'}</td>
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${item.description || ''}</td>
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">${item.quantity}</td>
-          <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">$${(item.unit_price || "0.00")}</td>
-          <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">$${(item.total || "0.00")}</td>
+          <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">$${(item.unit_price || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">$${(item.total || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         </tr>`
     ).join('');
     const discountLine = quote.discount_percent > 0
-      ? `<tr><td colspan="5" style="padding:4px 12px;text-align:right;color:#e53e3e">Discount (${quote.discount_percent}%)</td><td style="padding:4px 12px;text-align:right;color:#e53e3e">-$${(quote.subtotal * quote.discount_percent / 100).toLocaleString()}</td></tr>` : '';
+      ? `<tr><td colspan="5" style="padding:4px 12px;text-align:right;color:#e53e3e">Discount (${quote.discount_percent}%)</td><td style="padding:4px 12px;text-align:right;color:#e53e3e">-$${(quote.subtotal * quote.discount_percent / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>` : '';
     const packingLine = quote.packing > 0
-      ? `<tr><td colspan="5" style="padding:4px 12px;text-align:right">Packing</td><td style="padding:4px 12px;text-align:right">$${quote.packing.toLocaleString()}</td></tr>` : '';
+      ? `<tr><td colspan="5" style="padding:4px 12px;text-align:right">Packing</td><td style="padding:4px 12px;text-align:right">$${quote.packing.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>` : '';
     const exportLine = quote.export_declaration > 0
-      ? `<tr><td colspan="5" style="padding:4px 12px;text-align:right">Export Declaration</td><td style="padding:4px 12px;text-align:right">$${quote.export_declaration.toLocaleString()}</td></tr>` : '';
+      ? `<tr><td colspan="5" style="padding:4px 12px;text-align:right">Export Declaration</td><td style="padding:4px 12px;text-align:right">$${quote.export_declaration.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>` : '';
     const taxLine = quote.tax_amount > 0
-      ? `<tr><td colspan="5" style="padding:4px 12px;text-align:right">Tax (${quote.tax_rate}%)</td><td style="padding:4px 12px;text-align:right">$${quote.tax_amount.toLocaleString()}</td></tr>` : '';
+      ? `<tr><td colspan="5" style="padding:4px 12px;text-align:right">Tax (${quote.tax_rate}%)</td><td style="padding:4px 12px;text-align:right">$${quote.tax_amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>` : '';
 
 
     return {
@@ -65,11 +65,11 @@ class EmailService {
                 <th style="padding:8px 12px;text-align:right">Total</th>
               </tr>
               ${itemsHtml}
-              <tr><td colspan="5" style="padding:4px 12px;text-align:right">Subtotal</td><td style="padding:4px 12px;text-align:right">$${(quote.subtotal || 0).toLocaleString()}</td></tr>
+              <tr><td colspan="5" style="padding:4px 12px;text-align:right">Subtotal</td><td style="padding:4px 12px;text-align:right">$${(quote.subtotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td></tr>
               ${discountLine}${packingLine}${exportLine}${taxLine}
               <tr style="font-weight:bold;font-size:16px">
                 <td colspan="5" style="padding:8px 12px;text-align:right;border-top:2px solid #e2e8f0">Total</td>
-                <td style="padding:8px 12px;text-align:right;border-top:2px solid #e2e8f0">$${(quote.total_amount || 0).toLocaleString()}</td>
+                <td style="padding:8px 12px;text-align:right;border-top:2px solid #e2e8f0">$${(quote.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
               </tr>
             </table>
             ${quote.valid_until ? `<p style="font-size:13px;color:#718096">This quote is valid until <strong>${quote.valid_until}</strong>.</p>` : ''}
@@ -169,7 +169,7 @@ class EmailService {
         <tr>
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${item.description || ''}</td>
           <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">${item.quantity}</td>
-          <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">$${(item.unit_price || 0).toLocaleString()}</td>
+          <td style="padding:6px 12px;border-bottom:1px solid #e2e8f0;text-align:right">$${(item.unit_price || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         </tr>`
     ).join('');
     return {
@@ -179,7 +179,7 @@ class EmailService {
           <h2>Invoice from ${invoice.sending_entity || 'Wiegand'}</h2>
           <p>Dear ${client.contact_name || client.company_name},</p>
           <p>Please find your invoice from ${invoice.sending_entity || 'Wiegand'} is ready.</p>
-          <p>Total: $${(invoice.total_amount || 0).toLocaleString()}</p>
+          <p>Total: $${(invoice.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           <p>Please <a href='${process.env.FRONTEND_URL}'>log in</a> to your portal to view details.</p>
         </div>
       `,

@@ -51,6 +51,7 @@ router.get('/', requireAuth, loadContext, requireRoles(['client_admin', 'super_a
               'membership_id', cm.id,
               'client_id', cm.client_id,
               'client_name', c.company_name,
+              'client_del_at', c.deleted_at,
               'is_active', cm.is_active,
               'created_at', cm.created_at,
               'joined_at', cm.created_at, 
@@ -71,6 +72,7 @@ router.get('/', requireAuth, loadContext, requireRoles(['client_admin', 'super_a
     )
     .leftJoin('client_memberships as cm', 'cm.user_id', 'users.id')
     .leftJoin('clients as c', 'c.id', 'cm.client_id')
+    .whereNull('c.deleted_at')
     .groupBy('users.id')
     .orderBy('users.created_at', 'desc')
     .limit(limit).offset(offset);
@@ -82,6 +84,8 @@ router.get('/', requireAuth, loadContext, requireRoles(['client_admin', 'super_a
         .whereRaw('cm_filter.user_id = users.id')
         .where('cm_filter.client_id', client_id)
         .where('cm_filter.is_active', true)
+        .whereNull('c.deleted_at')
+    .whereNull('users.client_del_at')
         .where('c.status', 'active');
     });
   }
@@ -167,6 +171,7 @@ router.get('/:id', requireAuth, loadContext, requireRoles(['super_admin', 'platf
       .join('clients as t', 't.id', 'tm.client_id')
       .where('tm.user_id', userId)
       .where('tm.is_active', true)
+      .whereNull('t.deleted_at')
       .select(
         'tm.id as membership_id', 
         't.id as client_id',
@@ -198,7 +203,7 @@ router.post('/:id/clients/:clientId',
     const { roleIds = [] } = req.body;
     const { id: user_id, clientId: client_id } = req.params;
 
-    const clientExists = await db('clients').where({ id: client_id }).first();
+    const clientExists = await db('clients').whereNull('deleted_at').where({ id: client_id }).first();
     if (!clientExists) return res.status(404).json({ error: 'Client not found.' });
 
     const userExists = await db('users').where({ id: user_id, deleted_at: null }).first();
@@ -387,10 +392,11 @@ router.delete('/:id',
   auditMiddleware({action: 'user.deleted', resourceType:'user'}),
   asyncHandler(async (req, res) => {
   const user_id_to_delete = req.params.id;
-  await db('users').where({ id: user_id_to_delete }).update({ status: 'inactive' ,deleted_at:db.fn.now(), updated_at: new Date()});
+  await db('users').where({ id: user_id_to_delete }).del()
+  // await db('users').where({ id: user_id_to_delete }).update({ status: 'inactive' ,deleted_at:db.fn.now(), updated_at: new Date()});
 
   permissionCache.del(`user_client_permissions:${user_id_to_delete}`);
-  console.log(`Invalidated permission cache for user ${user_id_to_delete} due to soft deletion.`);
+  console.log(`Invalidated permission cache for user ${user_id_to_delete} due to deletion.`);
   const io = getIO();
   if (io) {
       io.emit('notification:new', { category:'user'})

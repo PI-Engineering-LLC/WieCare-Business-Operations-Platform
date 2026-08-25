@@ -11,7 +11,9 @@ const { getIO } = require('../config/socket');
 // GET /api/clients
 router.get('/', requireAuth, loadContext, adminOnly, // Assuming only internal admins can list all clients
   asyncHandler(async (req, res) => {
-    let q = db('clients').orderBy('company_name');
+    let q = db('clients')
+    .whereNull('deleted_at')
+    .orderBy('company_name');
 
     if (req.query.id) {
       // If an ID is provided, fetch a single client
@@ -102,11 +104,38 @@ router.patch('/:id', requireAuth, loadContext, adminOnly,
 router.delete('/:id', requireAuth, loadContext, adminOnly,
   auditMiddleware({ action: 'client.deleted', resourceType: 'client' }),
   asyncHandler(async (req, res) => {
-    const deletedCount = await db('clients').where({ id: req.params.id }).del();
-    if (deletedCount === 0) return res.status(404).json({ error: 'Client not found' });
+    const clientId = req.params.id ;
+    // const deletedCount = await db('clients').where({ id: req.params.id }).del();
+    // if (deletedCount === 0) return res.status(404).json({ error: 'Client not found' });
+    await db.transaction(async (trx) => {
+      // 1. Find orphaned users BEFORE deleting the client
+      //    (because memberships will be gone after)
+      const orphanedUserIds = await trx('client_memberships as tm')
+        .join('users as u', 'tm.user_id', 'u.id')
+        .where('tm.client_id', clientId)
+        .whereNull('u.platform_role')
+        .whereNotExists(function() {
+          this.select(1)
+            .from('client_memberships as tm2')
+            .whereRaw('tm2.user_id = tm.user_id')
+            .where('tm2.client_id', '!=', clientId);
+        })
+        .pluck('tm.user_id');
+    
+      // Soft- Delete the client (CASCADE will wipe client_memberships)
+      await trx('clients').where({ id: clientId }).del();
+      // await trx('clients').where({ id: clientId }).update({ status: 'inactive' ,deleted_at:db.fn.now(), updated_at: new Date()});
+    
+      // 3. Now soft-delete the orphaned users
+      if (orphanedUserIds.length > 0) {
+        await trx('users').whereIn('id', orphanedUserIds).del();
+        // await trx('users').whereIn('id', orphanedUserIds).update({ status: 'inactive' ,deleted_at:db.fn.now(), updated_at: new Date()});
+      }
+    });
     const io = getIO();
         if (io) {
           io.emit('notification:new', { category:'client'})
+          io.emit('notification:new', { category:'user'})
             io.to('admins').emit('notification:new', { category:'client'})
         }
     res.json({ message: 'Client deleted successfully.' });
