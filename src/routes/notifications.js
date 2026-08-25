@@ -154,7 +154,7 @@ router.post('/', requireAuth, loadContext, adminOnly,
   res.status(201).json(notification);
 }));
 
-// POST /api/notifications/client (admin — send to all users in a client, but email only to contact)
+// POST /api/notifications/client (admin — send to all users in a client)
 router.post('/client', requireAuth, loadContext, adminOnly,
   auditMiddleware({action: 'notification.sent_to_client', resourceType:'notification'}),
   asyncHandler( async (req, res) => {
@@ -175,7 +175,7 @@ router.post('/client', requireAuth, loadContext, adminOnly,
       }
   }
 
-  const notifications = await notificationService.notifyClientUsers({
+  const notifications = await notificationService.notifyClientUsersWithEmail({
       clientId: client_id,
       email: clientContactEmail, // Pass the contact email for the service to use
       title,
