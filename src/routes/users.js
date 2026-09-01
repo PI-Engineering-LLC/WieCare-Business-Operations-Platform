@@ -85,7 +85,6 @@ router.get('/', requireAuth, loadContext, requireRoles(['client_admin', 'super_a
         .where('cm_filter.client_id', client_id)
         .where('cm_filter.is_active', true)
         .whereNull('c.deleted_at')
-    .whereNull('users.client_del_at')
         .where('c.status', 'active');
     });
   }
