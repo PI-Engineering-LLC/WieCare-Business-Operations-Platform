@@ -15,7 +15,7 @@ const { getIO } = require('../config/socket');
 // Training sessions
 router.get('/', requireAuth,loadContext,resolveClientContext,
   asyncHandler( async (req, res) => {
-  let q = db('training_sessions').orderBy('session_date');
+  let q = db('training_sessions').orderBy('session_date', 'desc');
   if (req.query.client_id) q = q.where({ client_id: req.query.client_id });
     q = clientScope(q, req);
   if (req.query.status) q = q.where({ status: req.query.status });
