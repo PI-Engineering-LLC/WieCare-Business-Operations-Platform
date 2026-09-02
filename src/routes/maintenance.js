@@ -59,10 +59,11 @@ router.post('/', requireAuth,loadContext,resolveClientContext,holdCheck,
             is_email_sent: true
             // isSendEmail: true
           })
-          const adminEmail = process.env.ADMIN_EMAIL
-                  if (adminEmail) {
-                    await emailService.queue({ to: adminEmail, type: "maintenance_request", payload: { title, message } });
-                }
+          await notificationService.emailAdmins({ type: "maintenance_request", payload: { title, message } });
+          // const adminEmail = process.env.ADMIN_EMAIL
+          //         if (adminEmail) {
+          //           await emailService.queue({ to: adminEmail, type: "maintenance_request", payload: { title, message } });
+          //       }
   res.status(201).json(mr);
 }));
 router.patch('/:id', requireAuth,loadContext, adminOnly, 
@@ -83,10 +84,14 @@ router.patch('/:id', requireAuth,loadContext, adminOnly,
               resourceType: "maintenance"
             });
           if(client) {
-              await emailService.queue({ type: 'maintenance_update', to: client?.contact_email, payload: {
-                maintenance: mr,
-                  client,
-                } });
+            await notificationService.emailClientAdmins({ type: 'maintenance_update', clientId: client?.id, payload: {
+              maintenance: mr,
+                client,
+              } });
+              // await emailService.queue({ type: 'maintenance_update', to: client?.contact_email, payload: {
+              //   maintenance: mr,
+              //     client,
+              //   } });
       
           }
   res.json(mr);

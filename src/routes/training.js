@@ -56,10 +56,14 @@ router.post('/', requireAuth,loadContext, adminOnly,
             resourceType: "training_session"
           });
         if(client) {
-            await emailService.queue({ type: 'training_created', to: client?.contact_email, payload: {
-              training: session,
-                client,
-              } });
+          await notificationService.emailClientAdmins({ type: 'training_created', clientId: client?.id, payload: {
+            training: session,
+            client,
+                        } });
+            // await emailService.queue({ type: 'training_created', to: client?.contact_email, payload: {
+            //   training: session,
+            //     client,
+            //   } });
     
         }
   res.status(201).json(session);
@@ -73,6 +77,30 @@ router.patch('/:id', requireAuth,loadContext, adminOnly,
           if (io) {
             io.to(`client:${session.client_id}`).emit('notification:new', { category:'training'});
           }
+          const client = await db('clients').where({ id: session.client_id}).first();
+          await notificationService.notifyClientUsers({
+            clientId: session.client_id,
+            email: client?.contact_email,
+            title: ` Training Session: ${session.title || ''} updated `,
+            message: `The ${session.category} training session for "${session.coaster_name}" has been updated.`,
+            type: 'info',
+            category: 'training',
+            link: `/Training`,
+            is_email_sent: !!client?.contact_email,
+            resourceId: session.id,
+            resourceType: "training_session"
+          });
+        if(client) {
+          await notificationService.emailClientAdmins({ type: 'training_updated', clientId: client?.id, payload: {
+            training: session,
+            client,
+                        } });
+            // await emailService.queue({ type: 'training_created', to: client?.contact_email, payload: {
+            //   training: session,
+            //     client,
+            //   } });
+    
+        }
   res.json(session);
 }));
 
@@ -119,10 +147,12 @@ router.post('/registrations', requireAuth,loadContext,resolveClientContext,
           is_email_sent: true
           // isSendEmail: true
         })
-        const adminEmail = process.env.ADMIN_EMAIL
-                if (adminEmail) {
-                  await emailService.queue({ to: adminEmail, type: "training_registration", payload: { title, message } });
-              }
+        await notificationService.emailAdmins({ type: "training_registration", payload: { title, message } });
+                 
+        // const adminEmail = process.env.ADMIN_EMAIL
+        //         if (adminEmail) {
+        //           await emailService.queue({ to: adminEmail, type: "training_registration", payload: { title, message } });
+        //       }
               // const io = getIO();
               // if (io) {
               //   io.to(`client:${reg.client_id}`).emit('notification:new', { category:'training'});
@@ -161,8 +191,27 @@ router.patch('/registrations/:id', requireAuth,loadContext,
   const io = getIO();
           if (io) {
             io.to(`client:${reg.client_id}`).emit('notification:new', { category:'training'});
-            io.to('admins').emit('notification:new', { category:'training'})
+            // io.to('admins').emit('notification:new', { category:'training'})
           }
+          const title= ' Training Registration updated';
+  const message= ` ${req.user.full_name || "User"} from ${client?.company_name || "a client"}  has updated the training session: ${session.title || ''}`;
+  // const io = getIO();
+  // if (io) {
+  //   io.to(`client:${reg.client_id}`).emit('notification:new', { category:'training'});
+  //   io.to('admins').emit('notification:new', { category:'training'})
+  // }     
+  await notificationService.notifyAllAdmins({
+          title,
+          message,
+          type: 'info',
+          category: 'training',
+          resourceId: reg.id,
+          resourceType: "training_request",
+          is_email_sent: true
+          // isSendEmail: true
+        })
+        await notificationService.emailAdmins({ type: "general", payload: { title, message } });
+        
   res.json(reg);
 }));
 
@@ -219,10 +268,12 @@ router.post('/requests', requireAuth,loadContext,resolveClientContext,
           is_email_sent: true
           // isSendEmail: true
         })
-        const adminEmail = process.env.ADMIN_EMAIL
-                if (adminEmail) {
-                  await emailService.queue({ to: adminEmail, type: "training_request", payload: { title, message } });
-              }
+        await notificationService.emailAdmins({ type: "training_request", payload: { title, message } });
+        
+        // const adminEmail = process.env.ADMIN_EMAIL
+        //         if (adminEmail) {
+        //           await emailService.queue({ to: adminEmail, type: "training_request", payload: { title, message } });
+        //       }
 
   res.status(201).json(tr);
 }));
@@ -236,6 +287,21 @@ router.patch('/requests/:id', requireAuth,loadContext, adminOnly,
             io.to(`client:${tr.client_id}`).emit('notification:new', { category:'training'});
             io.to('admins').emit('notification:new', { category:'training'})
           }
+          const title= 'Training Request Updated';
+  const message= `The ${tr.training_type} training request submitted by ${clientName || 'a client'} has been updated`;
+        
+  await notificationService.notifyAllAdmins({
+          title,
+          message,
+          type: 'info',
+          category: 'training',
+          resourceId: tr.id,
+          resourceType: "training_request",
+          is_email_sent: true
+          // isSendEmail: true
+        })
+        await notificationService.emailAdmins({ type: "general", payload: { title, message } });
+    
   res.json(tr);
 }));
 

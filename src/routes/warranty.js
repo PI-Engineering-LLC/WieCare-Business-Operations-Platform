@@ -73,10 +73,12 @@ router.post('/', requireAuth, loadContext, resolveClientContext,
                 is_email_sent: true
                 // isSendEmail: true
               })
-              const adminEmail = process.env.ADMIN_EMAIL
-                      if (adminEmail) {
-                        await emailService.queue({ to: adminEmail, type: "warranty", payload: { title, message } });
-                    }
+                        await notificationService.emailAdmins({ type: "warranty", payload: { title, message } });
+              
+              // const adminEmail = process.env.ADMIN_EMAIL
+              //         if (adminEmail) {
+              //           await emailService.queue({ to: adminEmail, type: "warranty", payload: { title, message } });
+              //       }
     res.status(201).json(claim);
   }));
 
@@ -101,10 +103,14 @@ router.patch('/:id', requireAuth, loadContext, adminOnly,
               resourceType: "warranty"
             });
           if(client) {
-              await emailService.queue({ type: 'warranty_update', to: client?.contact_email, payload: {
-                claim: claim,
-                  client,
-                } });
+            await notificationService.emailClientAdmins({ type: 'warranty_update', clientId: client?.id, payload: {
+              claim: claim,
+                            client,
+                          } });
+              // await emailService.queue({ type: 'warranty_update', to: client?.contact_email, payload: {
+              //   claim: claim,
+              //     client,
+              //   } });
       
           }
     res.json(claim);

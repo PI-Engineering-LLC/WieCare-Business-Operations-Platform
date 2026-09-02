@@ -11,6 +11,7 @@ const auditMiddleware = require('../middleware/auditMiddleware');
 const requireRoles = require('../middleware/roles');
 const { getSignedUrl: storageGetSignedUrl, deleteFile } = require('../storage');
 const { getIO } = require('../config/socket');
+const notificationService = require('../services/notifications.service'); 
 
 router.get('/', requireAuth, loadContext, resolveClientContext,
   asyncHandler(async (req, res) => {
@@ -98,8 +99,12 @@ router.get('/:id/download', requireAuth, loadContext, resolveClientContext,
 router.post('/', requireAuth, loadContext,
   auditMiddleware({ action: 'document.created', resourceType: 'document' }),
   asyncHandler(async (req, res) => {
-    const client_id = req.body.clientId === "" ? null : req.body.clientId
-    const client = await db('clients').where({ id: client_id, status: 'active' }).first();
+    const client_id = req.body.client_id === "" ? null : req.body.client_id
+    let client; 
+    console.log("###########", client_id )
+    if(client_id){
+      client = await db('clients').where({ id: client_id, status: 'active' }).first();
+    }
     const [doc] = await db('documents').insert({
       ...req.body,
       client_id ,
@@ -110,13 +115,26 @@ router.post('/', requireAuth, loadContext,
     const io = getIO();
       if (io) {
         if(client_id){
+          
           io.to(`client:${client_id }`).emit('notification:new', { category:'document'})
+         
+         
+  
         }else{
           io.emit('notification:new', { category:'document'})
         }
         // io.to(`client:${invoice.client_id }`).emit('notification:new', { category:'document'});
         io.to('admins').emit('notification:new', { category:'document'})
         // io.emit('notification:new', { category:'document'})
+      }
+
+      const title= ' New Document  uploaded';
+  const message= ` A new document has been uploaded: ${doc.title || ''}`;
+      if(doc.client_id && !doc.is_public){
+        await notificationService.emailClientAdmins({ type: "general", clientId:doc.client_id,  payload: { title, message } });
+      }else if(doc.is_public){
+        await notificationService.emailAllClientUsers({ type: "general", payload: { title, message } });
+
       }
     res.status(201).json(doc);
   }));
@@ -139,12 +157,20 @@ router.patch('/:id', requireAuth, loadContext, adminOnly,
       if (io) {
         if(doc.client_id){
           io.to(`client:${doc.client_id }`).emit('notification:new', { category:'document'})
-        }else{
+           }else{
           io.emit('notification:new', { category:'document'})
         }
         // io.to(`client:${invoice.client_id }`).emit('notification:new', { category:'document'});
         io.to('admins').emit('notification:new', { category:'document'})
         // io.emit('notification:new', { category:'document'})
+      }
+      const title= ' Document  updated';
+      const message= ` A document ${doc.title || ''} has been updated`;
+      if(doc.client_id && !doc.is_public){
+        await notificationService.emailClientAdmins({ type: "general", clientId:doc.client_id,  payload: { title, message } });
+      }else if(doc.is_public){
+        await notificationService.emailAllClientUsers({ type: "general", payload: { title, message } });
+
       }
     res.json(doc);
   }));

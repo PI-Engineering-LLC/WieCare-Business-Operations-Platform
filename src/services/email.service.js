@@ -13,6 +13,7 @@ class EmailService {
     inspection_reminder: this.buildInspectionReminderEmail.bind(this),
     training_reminder: this.buildTrainingReminderEmail.bind(this),
     training_created: this.buildTrainingCreatedEmail.bind(this),
+    training_updated: this.buildTrainingUpdatedEmail.bind(this),
     invoice_issue: this.buildInvoiceEmail.bind(this),
     warranty_update: this.buildWarrantyUpdateEmail.bind(this),
     invite: this.buildInvitationEmail.bind(this),
@@ -164,6 +165,28 @@ class EmailService {
     `,
     };
   }
+  buildTrainingUpdatedEmail({ training, client}) {
+    return {
+      subject: `Training Session – ${training.title} Updated`,
+      html: `
+
+      <div style="font-family:sans-serif;max-width:680px;margin:0 auto;color:#1a202c">
+  <div style="background:#1e3a5f;padding:24px 32px;border-radius:8px 8px 0 0">
+    <h1 style="color:white;margin:0;font-size:22px">New Training Session: ${training.title}</h1>
+  </div>
+  <div style="background:#f8fafc;padding:24px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0">
+    <p>The ${training.category} training session for <strong>${training.coaster_name}</strong> has been updated.</p>
+    <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">
+      <tr><td style="padding:6px 12px;font-weight:bold;border-bottom:1px solid #e2e8f0">Date</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${training.session_date}</td></tr>
+      <tr><td style="padding:6px 12px;font-weight:bold;border-bottom:1px solid #e2e8f0">Time</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${training.start_time} - ${training.end_time}</td></tr>
+      <tr><td style="padding:6px 12px;font-weight:bold;border-bottom:1px solid #e2e8f0">Location</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${training.location}</td></tr>
+    </table>
+    <p>Please <a href='${process.env.FRONTEND_URL}'>log in</a> to your portal to view more details and register.</p>
+  </div>
+</div>
+    `,
+    };
+  }
   buildInvoiceEmail({ invoice, client }) {
     const itemsHtml = (invoice.items || []).map(item => `
         <tr>
@@ -211,6 +234,7 @@ class EmailService {
          <div style="font-family:sans-serif;max-width:680px;margin:0 auto">
      
         <p>${message}<p/>
+        <p>Please <a href='${process.env.FRONTEND_URL}'>log in</a> to the portal to view.</p>
         </div>
         ` :
 

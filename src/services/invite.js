@@ -11,7 +11,23 @@ class InviteService {
                 .where({ email: normalizedEmail, deleted_at: null })
                 .first();
 
-            if (existingUser) { throw new Error('User already exists'); }
+            if (existingUser) { 
+                if (clientId) {
+                    const [membership] = await trx('client_memberships').insert({
+                        user_id: existingUser.id,
+                        client_id: clientId,
+                    }).onConflict(['user_id', 'client_id']).ignore().returning('*');
+    
+                    if (role_ids && Array.isArray(role_ids) && membership) {
+                        const roleInserts = role_ids.map(role_id => ({
+                            membership_id: membership.id,
+                            role_id,
+                        }));
+                        await trx('membership_roles').insert(roleInserts).onConflict().ignore();
+                    }
+                }
+                // throw new Error('User already exists'); 
+            }else{
             const existingInvite = await trx('invites').where({ email: normalizedEmail })
                 .whereNull('accepted_at')
                 .where('invite_expires_at', '>', trx.fn.now()).first();
@@ -68,6 +84,7 @@ class InviteService {
 
             await emailService.queue({ to: normalizedEmail, type: 'invite', payload: { inviteUrl, inviterName, inviterOrgName, inviterOrgCoaster, inviteType } });
             return { id: invite.id, email: normalizedEmail, inviteUrl, invite_expires_at };
+        }
         }
         );
     }

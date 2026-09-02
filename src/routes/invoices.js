@@ -108,10 +108,14 @@ const [{ nextval }] = result.rows;
         resourceType: "invoice"
       });
     if(client) {
-        await emailService.queue({ type: 'invoice_issue', to: client?.contact_email, payload: {
-          invoice: inv,
-            client,
-          } });
+      await notificationService.emailClientAdmins({ type: 'invoice_issue', clientId: client?.id, payload: {
+        invoice: inv,
+          client,
+        } });
+        // await emailService.queue({ type: 'invoice_issue', to: client?.contact_email, payload: {
+        //   invoice: inv,
+        //     client,
+        //   } });
 
     }
    
@@ -218,10 +222,14 @@ const [inv] = await db('invoices').where({ id: req.params.id }).update(updateDat
       });
 
       if(client) {
-        await emailService.queue({ type: 'invoice_issue', to: client?.contact_email, payload: {
-            invoice: inv,
+        await notificationService.emailClientAdmins({ type: 'invoice_issue', clientId: client?.id, payload: {
+          invoice: inv,
             client,
           } });
+        // await emailService.queue({ type: 'invoice_issue', to: client?.contact_email, payload: {
+        //     invoice: inv,
+        //     client,
+        //   } });
 
     }
     } else if (inv.status != 'draft') {

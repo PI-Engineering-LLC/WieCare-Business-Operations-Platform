@@ -216,7 +216,7 @@ router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
               }
             }
 
-            const notifications = await notificationService.notifyClientUsers({
+            const notifications = await notificationService.notifyClientUsersWithEmail({
               clientId: client_id,
               email: clientContactEmail, // Pass the contact email for the service to use
               title: 'Payment Received',

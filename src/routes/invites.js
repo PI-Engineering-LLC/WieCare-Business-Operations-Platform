@@ -25,6 +25,7 @@ router.post('/', requireAuth, loadContext, resolveAuthContext, requireRoles(['cl
           .join('client_memberships as cm', 'cm.user_id', 'users.id')
           .join('clients as c', 'c.id', 'cm.client_id')
           .where('cm.client_id', clientId)
+          .where('cm.is_active', true)
           .count('users.id as count')
           .first();
 
@@ -63,8 +64,9 @@ router.post('/', requireAuth, loadContext, resolveAuthContext, requireRoles(['cl
     if (io) {
       io.emit('notification:new', { category:'invite'})
         io.to('admins').emit('notification:new', { category:'invite'})
+        io.to('admins').emit('notification:new', { category:'user'})
     }
-    await audit({ actorUserId: req.user.id, clientId: req.clientId, action: 'invite.created', resourceType: 'invite', resourceId: invite.id, metadata: { email, role_ids, platformRole }, req });
+    await audit({ actorUserId: req.user.id, clientId: req.clientId, action: 'invite.created', resourceType: 'invite', resourceId: invite?.id, metadata: { email, role_ids, platformRole }, req });
 
     res.json({ success: true });
   }));

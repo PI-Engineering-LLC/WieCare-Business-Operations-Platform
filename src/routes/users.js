@@ -249,20 +249,28 @@ router.put('/:id/clients/:clientId/roles',
     // flat array of all IDs found across all memberships:
     // const flattenedRoleIds = memberships.flatMap(m => m.roleIds)
     const status = memberships[0].status;
+    let is_active = status =='active'
     const { id: user_id, clientId: client_id } = req.params;
+    const [updatedUser] = await db('users').where({ id: user_id }).update({ updated_at: new Date() }).returning('*');
 
-    const [updatedUser] = await db('users').where({ id: user_id }).update({ status, updated_at: new Date() }).returning('*');
+
+    // const [updatedUser] = await db('users').where({ id: user_id }).update({ status, updated_at: new Date() }).returning('*');
     const membership = await db('client_memberships')
       .where({ user_id, client_id })
       .first();
-
+      
     if (!membership) {
       return res.status(404).json({ error: 'User is not a member of this client.' });
     }
+    const [updatedMembership] = await db('client_memberships').where({ user_id, client_id }).update({ is_active, updated_at: new Date() }).returning('*');
+
 
     await db.transaction(async (trx) => {
       await trx('membership_roles').where({ membership_id: membership.id }).delete();
-      if (roleIds.length > 0) {
+      if (!is_active) {
+        await trx('client_memberships').where({ id: membership.id }).delete()
+      }
+      if (roleIds.length > 0 && is_active) {
         const inserts = roleIds.map(role_id => ({ membership_id: membership.id, role_id }));
         await trx('membership_roles').insert(inserts);
       }

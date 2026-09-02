@@ -82,14 +82,20 @@ router.post('/', requireAuth, loadContext, resolveClientContext, holdCheck,
         resourceId: quote.id,
         resourceType: "quote"
       });
+
       if (client) {
-        await emailService.queue({
-          type: 'quote_issue', to: client?.contact_email, payload: {
-            is_update: isUpdate,
-            quote,
-            client,
-          }
-        });
+        await notificationService.emailClientAdmins({ type: 'quote_issue', clientId: client?.id, payload: {
+          is_update: isUpdate,
+          quote,
+          client,
+                      } });
+        // await emailService.queue({
+        //   type: 'quote_issue', to: client?.contact_email, payload: {
+        //     is_update: isUpdate,
+        //     quote,
+        //     client,
+        //   }
+        // });
 
       }
 
@@ -143,13 +149,18 @@ router.patch('/:id', requireAuth, loadContext, resolveClientContext,
         resourceType: "quote"
       });
       if (client) {
-        await emailService.queue({
-          type: 'quote_issue', to: client?.contact_email, payload: {
-            is_update: isUpdate,
-            quote,
-            client,
-          }
-        });
+        await notificationService.emailClientAdmins({ type: 'quote_issue', clientId: client?.id, payload: {
+          is_update: isUpdate,
+          quote,
+          client,
+                      } });
+        // await emailService.queue({
+        //   type: 'quote_issue', to: client?.contact_email, payload: {
+        //     is_update: isUpdate,
+        //     quote,
+        //     client,
+        //   }
+        // });
 
       }
 
@@ -180,12 +191,15 @@ router.patch('/:id', requireAuth, loadContext, resolveClientContext,
         resourceType: "quote",
         // isSendEmail: true
       });
-      const adminEmail = process.env.ADMIN_EMAIL
-                        if (adminEmail) {
-                          await emailService.queue({ to: adminEmail, type: "general", payload: { title: `Quote ${quote.title}. Status updated to ${quote.status}`,
-                             message: `${quote.client_name || 'A client'} has updated the status on quote "${quote.title}" (${quote.quote_number || quote.id?.slice(-6)}): ${quote.notes}`,
-                             } });
-                      }
+      await notificationService.emailAdmins({ type: "general", payload: { title: `Quote ${quote.title}. Status updated to ${quote.status}`,
+        message: `${quote.client_name || 'A client'} has updated the status on quote "${quote.title}" (${quote.quote_number || quote.id?.slice(-6)}): ${quote.notes}`,
+        } });
+      // const adminEmail = process.env.ADMIN_EMAIL
+      //                   if (adminEmail) {
+      //                     await emailService.queue({ to: adminEmail, type: "general", payload: { title: `Quote ${quote.title}. Status updated to ${quote.status}`,
+      //                        message: `${quote.client_name || 'A client'} has updated the status on quote "${quote.title}" (${quote.quote_number || quote.id?.slice(-6)}): ${quote.notes}`,
+      //                        } });
+      //                 }
     }
 
     if (updates.status === 'approved') {
