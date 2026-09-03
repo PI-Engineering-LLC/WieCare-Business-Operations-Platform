@@ -33,10 +33,19 @@ router.post('/', requireAuth, loadContext, resolveClientContext, holdCheck,
   auditMiddleware({ action: 'quote.created', resourceType: 'quote' }),
   asyncHandler(async (req, res) => {
     const quoteClientId= req.body.client_id;
+    const adminNote = req.body.notes
     const client = await db('clients').where({ id: quoteClientId}).first();
+    let savedNotes = ''
+    if (adminNote && typeof adminNote === 'string') {
+      if(req.user.isInternalAdmin){
+       const  modifiedBy = `[Admin note - ${new Date().toLocaleDateString()}]:\n` 
+       savedNotes = `\n\n${modifiedBy}${adminNote}`;
+      }
+    }
 
     const [quote] = await db('quotes').insert({
       ...req.body,
+      notes: (savedNotes || ''),
       client_name: client?.company_name ||  '',
       items: JSON.stringify(req.body.items ?? []),
       created_by: req.user.id,
@@ -117,16 +126,19 @@ router.patch('/:id', requireAuth, loadContext, resolveClientContext,
     const existing = await q;
     if (!existing) return res.status(404).json({ error: 'Not found' });
     // Handle notes appending
-    if (updates.notes && typeof updates.notes === 'string') {
-      let modifiedBy = '[Client Modification Request - '
+    if (updates.notes && typeof updates.notes === 'string' && (updates.notes !== existing.notes)) {
+      let modifiedBy = `[Client Modification Request - ${new Date().toLocaleDateString()}]:\n`
       if(req.user.isInternalAdmin){
-        modifiedBy = '[Admin note - ' 
+        modifiedBy = `[Admin note - ${new Date().toLocaleDateString()}]:\n` 
 
       }
-      const modNote = `\n\n${modifiedBy}${new Date().toLocaleDateString()}]:\n${updates.notes}`;
+        const modNote = `\n\n${modifiedBy}${updates.notes}`;
 
       // const modNote = `\n\n[Client Modification Request - ${new Date().toLocaleDateString()}]:\n${updates.notes}`;
       updates.notes = (existing.notes || '') + modNote;
+
+      
+      
     } else {
       delete updates.notes; // Prevent overwriting with non-string or undefined
     }

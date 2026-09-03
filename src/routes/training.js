@@ -16,9 +16,9 @@ const { getIO } = require('../config/socket');
 router.get('/', requireAuth,loadContext,resolveClientContext,
   asyncHandler( async (req, res) => {
   let q = db('training_sessions').orderBy('session_date', 'desc');
-  if(!req.user.isInternalAdmin){
-    q = q.whereRaw("(session_date::date + start_time::time) >= NOW()")
-  }
+  // if(!req.user.isInternalAdmin){
+  //   q = q.whereRaw("(session_date::date + start_time::time) >= NOW()")
+  // }
   if (req.query.client_id) q = q.where({ client_id: req.query.client_id });
     q = clientScope(q, req);
   if (req.query.status) q = q.where({ status: req.query.status });
