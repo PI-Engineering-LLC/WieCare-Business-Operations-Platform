@@ -118,7 +118,14 @@ router.patch('/:id', requireAuth, loadContext, resolveClientContext,
     if (!existing) return res.status(404).json({ error: 'Not found' });
     // Handle notes appending
     if (updates.notes && typeof updates.notes === 'string') {
-      const modNote = `\n\n[Client Modification Request - ${new Date().toLocaleDateString()}]:\n${updates.notes}`;
+      let modifiedBy = '[Client Modification Request - '
+      if(req.user.isInternalAdmin){
+        modifiedBy = '[Admin note - ' 
+
+      }
+      const modNote = `\n\n${modifiedBy}${new Date().toLocaleDateString()}]:\n${updates.notes}`;
+
+      // const modNote = `\n\n[Client Modification Request - ${new Date().toLocaleDateString()}]:\n${updates.notes}`;
       updates.notes = (existing.notes || '') + modNote;
     } else {
       delete updates.notes; // Prevent overwriting with non-string or undefined
