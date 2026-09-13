@@ -270,7 +270,7 @@ router.post('/ipospays/createPaymentSession', requireAuth,loadContext,resolveCli
     const { invoiceId } = req.body;
   
 try {
-  const response = await PaymentService.checkPaymentLink(invoiceId);
+  const response = await PaymentService.checkPaymentLink(invoiceId, req.user.id);
   
   if (response.payment_url) {
       res.json({ url: response.payment_url });

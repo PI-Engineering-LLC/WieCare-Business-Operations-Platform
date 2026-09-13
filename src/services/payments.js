@@ -56,7 +56,7 @@ function generateReferenceId() {
 }
 
 class PaymentService {
-  async checkPaymentLink(invoiceId) {
+  async checkPaymentLink(invoiceId, userId) {
     //check if there is an invoice and auth
     const invoice = await db('invoices as i')
       .where('i.id', invoiceId)
@@ -91,7 +91,14 @@ class PaymentService {
               updated_at: new Date(),
             }).returning('*');;
             paymentAmount = updatedInvoice.balance_due
-            if(updatedInvoice.status === 'paid') throw new Error('Invoice is now Paid!')
+            if(updatedInvoice.status === 'paid'){
+              const io = getIO();
+      if (io) {
+        io.emit('notification:new', { category:'invoice'})
+        io.to('admins').emit('notification:new', { category:'invoice'})
+      }
+              throw new Error('Invoice is now Paid!')
+            }
 
     }
     if(( invoice.amount_paid !==total) && invoice.status !== 'paid'){
@@ -142,6 +149,8 @@ class PaymentService {
             transactionReferenceId: payment.transactionReferenceId
           }
         });
+
+        console.log(response)
         if (response.data.data.responseCode === '200' || response.data.data.responseCode === 200) {
           //payment successful but did not hit webhook. update to completed and set link expired to now?
           console.log('successful payment. mark as complete. TODO: update invoice balance due', response.data.data)
@@ -226,12 +235,14 @@ class PaymentService {
         link_expires_at: expirationDate,
         status: 'pending',
         invoice_id: invoiceId,
-        client_id: invoice.client_id
+        client_id: invoice.client_id,
+        recorded_by: userId || null
 
       }).returning('*');
+      console.log(payment)
       return ({ payment_url: paymentLinkInfo.link });
     }
-
+    
 
     // const amountInCents = Math.round(invoice.balance_due * 100);
     // let formattedPhoneNo;
