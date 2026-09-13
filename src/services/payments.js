@@ -200,12 +200,12 @@ class PaymentService {
           console.log(" payment exists,  not completed, link is not active... expired at is null")
         // const txReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
         const txReferenceId = `IN${generateReferenceId()}`
-      
-        const paymentLinkInfo = await this.getPaymentLink(paymentAmount, invoiceId, invoice.invoice_number, payment.transactionReferenceId, expiryDays, invoice.contact_email, invoice.contact_phone)
+        //transactionReferenceId
+        const paymentLinkInfo = await this.getPaymentLink(paymentAmount, invoiceId, invoice.invoice_number, txReferenceId, expiryDays, invoice.contact_email, invoice.contact_phone)
         console.log("%%%", paymentLinkInfo)
         const expirationDate = new Date();
         expirationDate.setDate(expirationDate.getDate() + expiryDays);
-        await db('payments').where({ id: payment.id }).update({ amount: paymentAmount, link: paymentLinkInfo.link, status: 'pending', link_expires_at: expirationDate });
+        await db('payments').where({ id: payment.id }).update({ amount: paymentAmount, link: paymentLinkInfo.link, status: 'pending', link_expires_at: expirationDate, transactionReferenceId:txReferenceId });
         return ({ payment_url: paymentLinkInfo.link });
 
         }
