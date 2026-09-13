@@ -150,7 +150,7 @@ class PaymentService {
           }
         });
 
-        console.log(response)
+        console.log(response.data)
         if (response.data.data.responseCode === '200' || response.data.data.responseCode === 200) {
           //payment successful but did not hit webhook. update to completed and set link expired to now?
           console.log('successful payment. mark as complete. TODO: update invoice balance due', response.data.data)
@@ -194,6 +194,18 @@ class PaymentService {
 
           }).returning('*');
           return ({ payment_url: paymentLinkInfo.link });
+
+        }else if(payment.link_expires_at < now){
+        //   console.log(" payment exists,  not completed, link is not active... expired at is null")
+        // // const txReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
+        // const txReferenceId = `IN${generateReferenceId()}`
+      
+        // const paymentLinkInfo = await this.getPaymentLink(paymentAmount, invoiceId, invoice.invoice_number, payment.transactionReferenceId, expiryDays, invoice.contact_email, invoice.contact_phone)
+        // console.log("%%%", paymentLinkInfo)
+        // const expirationDate = new Date();
+        // expirationDate.setDate(expirationDate.getDate() + expiryDays);
+        // await db('payments').where({ id: payment.id }).update({ amount: paymentAmount, link: paymentLinkInfo.link, status: 'pending', link_expires_at: expirationDate });
+        // return ({ payment_url: paymentLinkInfo.link });
 
         }
 
