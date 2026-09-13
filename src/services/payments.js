@@ -195,7 +195,8 @@ class PaymentService {
           }).returning('*');
           return ({ payment_url: paymentLinkInfo.link });
 
-        }else if(payment.link_expires_at < now){
+        }else if(!response.data.data || Object.keys(response.data.data).length === 0){
+          console.log("No response")
         //   console.log(" payment exists,  not completed, link is not active... expired at is null")
         // // const txReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
         // const txReferenceId = `IN${generateReferenceId()}`
