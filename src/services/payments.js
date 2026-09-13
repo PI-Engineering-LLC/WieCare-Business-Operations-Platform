@@ -169,7 +169,7 @@ class PaymentService {
           //   });
 
           return ({ payment_status: response.data.data.responseMessage })
-        } else if (response.data.data.responseCode === '400' || response.data.data.responseCode === 400) {
+        } else if (response.data.data.responseCode === '400' || response.data.data.responseCode === 400) {//response.data.status='Failure'
           console.log('failed payment. geerate new link',response.data.data)
           //payment failed but did not hit. Generate new link? Sometimes it failed but got completed after
           await db('payments').where({ id: payment.id }).update({ status: 'failed', link_expires_at: now });
@@ -196,9 +196,9 @@ class PaymentService {
           }).returning('*');
           return ({ payment_url: paymentLinkInfo.link });
 
-        }else if(!response.data.data || Object.keys(response.data.data).length === 0){
+        }else if((!response.data.data || Object.keys(response.data.data).length === 0 ) && payment.link_expires_at < now){ //response.data.status='Pending'
           console.log("No response")
-          console.log(" payment exists,  not completed, link is not active... expired at is null")
+          console.log(" payment exists,  not completed, link is not active... expired ")
         // const txReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
         const txReferenceId = `IN${generateReferenceId()}`
         //transactionReferenceId
