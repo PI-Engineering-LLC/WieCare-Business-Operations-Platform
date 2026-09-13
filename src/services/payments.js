@@ -150,7 +150,7 @@ class PaymentService {
           }
         });
 
-        console.log(response.data)
+        console.log(response.data.data)
         if (response.data.data.responseCode === '200' || response.data.data.responseCode === 200) {
           //payment successful but did not hit webhook. update to completed and set link expired to now?
           console.log('successful payment. mark as complete. TODO: update invoice balance due', response.data.data)
