@@ -138,6 +138,7 @@ class PaymentService {
       //Check if an active, unexpired link exists
       //&& payment.link_expires_at > now
       if (payment.link ) {
+        try{
         // First check if payment was successful or if it failed
         const response = await axios.get(QUERY_URL, {
           headers: {
@@ -213,6 +214,20 @@ class PaymentService {
 
         console.log(`Active link found for payment ${payment.id}. Reusing existing URL.`);
         return ({ payment_url: payment.link });
+      }catch(err){
+        console.log(" Error")
+          console.log(" payment exists,  not completed, link is not active... expired at is null")
+        // const txReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
+        const txReferenceId = `IN${generateReferenceId()}`
+        //transactionReferenceId
+        const paymentLinkInfo = await this.getPaymentLink(paymentAmount, invoiceId, invoice.invoice_number, txReferenceId, expiryDays, invoice.contact_email, invoice.contact_phone)
+        console.log("%%%", paymentLinkInfo)
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + expiryDays);
+        await db('payments').where({ id: payment.id }).update({ amount: paymentAmount, link: paymentLinkInfo.link, status: 'pending', link_expires_at: expirationDate, transactionReferenceId:txReferenceId });
+        return ({ payment_url: paymentLinkInfo.link });
+
+      }
       } else {
         console.log(" payment exists,  not completed, link is not active... expired at is null")
         // const txReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
