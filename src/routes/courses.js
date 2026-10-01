@@ -107,9 +107,6 @@ router.patch('/:id', requireAuth, loadContext, resolveClientContext,
 router.delete('/:id', requireAuth, loadContext, adminOnly,
   auditMiddleware({ action: 'course.deleted', resourceType: 'course' }),
   asyncHandler(async (req, res) => {
-    // if (req.query && req.query['x-id']) {
-    //   console.log('CRITICAL: Vercel param x-id detected in route:', req.originalUrl);
-    // }
     const currentCourse = await db('courses').where({ id: req.params.id }).first();
     await deleteFile(currentCourse.thumbnail_storage_key);
     await db('courses').where({ id: req.params.id }).delete();

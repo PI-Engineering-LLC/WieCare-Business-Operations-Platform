@@ -3,7 +3,8 @@ const db = require('../db');
 const axios = require('axios');
 const notificationService = require('../services/notifications.service');
 const { formatToStrict13 } = require('../utils/phone')
-const {getIO} = require('../config/socket')
+const {getIO} = require('../config/socket');
+const { updateClientHold } = require('../middleware/holdCheck');
 // const { nanoid } = require('nanoid');
 
 const BASE_URL = process.env.IPOSPAYS_SANDBOX === 'true'
@@ -69,7 +70,7 @@ class PaymentService {
     const query = db('payments').where({ invoice_id: invoiceId }).whereIn('status', ['completed']).sum('amount as total');
     const resultA = await query;
     
-    console.log("Raw result:", resultA);
+    // console.log("Raw result:", resultA);
 
     const result = await db('payments')
     .whereIn('status', ['completed'])
@@ -77,7 +78,7 @@ class PaymentService {
     .sum('amount as total')
     .first();
     const total = parseFloat(result.total || 0);
-    console.log("details", invoice,total, result, invoiceId)
+    // console.log("details", invoice,total, result, invoiceId)
     if((invoice.total_amount - invoice.amount_paid - total <=0) && invoice.status !== 'paid'){
       //update invoice balance due and status
       const newPaid = parseFloat(total || 0);
@@ -92,10 +93,12 @@ class PaymentService {
             }).returning('*');;
             paymentAmount = updatedInvoice.balance_due
             if(updatedInvoice.status === 'paid'){
+              updateClientHold(invoice.client_id)
               const io = getIO();
       if (io) {
         io.emit('notification:new', { category:'invoice'})
         io.to('admins').emit('notification:new', { category:'invoice'})
+        io.to('admins').emit('notification:new', { category:'client'})
       }
               throw new Error('Invoice is now Paid!')
             }
@@ -130,7 +133,7 @@ class PaymentService {
       .whereNotIn('status', ['completed'])
       .whereNotNull('link')
       .orderBy('created_at', 'desc').first();
-    console.log("@@@%%%", payment)
+    // console.log("@@@%%%", payment)
     const expiryDays = 1;
     if (payment && (payment.status !== 'completed')) {
       const now = new Date();
@@ -151,10 +154,10 @@ class PaymentService {
           }
         });
 
-        console.log(response.data)
+        // console.log(response.data)
         if (response.data.data.responseCode === '200' || response.data.data.responseCode === 200) {
           //payment successful but did not hit webhook. update to completed and set link expired to now?
-          console.log('successful payment. mark as complete. TODO: update invoice balance due', response.data.data)
+          // console.log('successful payment. mark as complete. TODO: update invoice balance due', response.data.data)
           await db('payments').where({ id: payment.id }).update({ status: 'completed', link_expires_at: now });
           
           // const newPaid = parseFloat(payment.amount || 0);
@@ -170,16 +173,16 @@ class PaymentService {
 
           return ({ payment_status: response.data.data.responseMessage })
         } else if (response.data.data.responseCode === '400' || response.data.data.responseCode === 400) {//response.data.status='Failure'
-          console.log('failed payment. geerate new link',response.data.data)
+          // console.log('failed payment. geerate new link',response.data.data)
           //payment failed but did not hit. Generate new link? Sometimes it failed but got completed after
           await db('payments').where({ id: payment.id }).update({ status: 'failed', link_expires_at: now });
           // const transactionId = `IN${invoiceId}--${Date.now().toString(36)}` 
           const transactionId = `IN${generateReferenceId()}`
-          console.log("transactionId",transactionId)
+          // console.log("transactionId",transactionId)
           const reference = this.generatePaymentReference();
           const method = 'ipospays'
           const paymentLinkInfo = await this.getPaymentLink(paymentAmount, invoiceId, invoice.invoice_number, transactionId, expiryDays, invoice.contact_email, invoice.contact_phone)
-          console.log("%%%1", paymentLinkInfo)
+          // console.log("%%%1", paymentLinkInfo)
           const expirationDate = new Date();
           expirationDate.setDate(expirationDate.getDate() + expiryDays);
          await db('payments').insert({
@@ -197,13 +200,13 @@ class PaymentService {
           return ({ payment_url: paymentLinkInfo.link });
 
         }else if((!response.data.data || Object.keys(response.data.data).length === 0 ) && payment.link_expires_at < now){ //response.data.status='Pending'
-          console.log("No response")
-          console.log(" payment exists,  not completed, link is not active... expired ")
+          // console.log("No response")
+          // console.log(" payment exists,  not completed, link is not active... expired ")
         // const txReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
         const txReferenceId = `IN${generateReferenceId()}`
         //transactionReferenceId
         const paymentLinkInfo = await this.getPaymentLink(paymentAmount, invoiceId, invoice.invoice_number, txReferenceId, expiryDays, invoice.contact_email, invoice.contact_phone)
-        console.log("%%%", paymentLinkInfo)
+        // console.log("%%%", paymentLinkInfo)
         const expirationDate = new Date();
         expirationDate.setDate(expirationDate.getDate() + expiryDays);
         await db('payments').where({ id: payment.id }).update({ amount: paymentAmount, link: paymentLinkInfo.link, status: 'pending', link_expires_at: expirationDate, transactionReferenceId:txReferenceId });
@@ -212,16 +215,16 @@ class PaymentService {
         }
 
 
-        console.log(`Active link found for payment ${payment.id}. Reusing existing URL.`);
+        // console.log(`Active link found for payment ${payment.id}. Reusing existing URL.`);
         return ({ payment_url: payment.link });
       }catch(err){
-        console.log(" Error")
-          console.log(" payment exists,  not completed, link is not active... expired at is null")
+        // console.log(" Error")
+          // console.log(" payment exists,  not completed, link is not active... expired at is null")
         // const txReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
         const txReferenceId = `IN${generateReferenceId()}`
         //transactionReferenceId
         const paymentLinkInfo = await this.getPaymentLink(paymentAmount, invoiceId, invoice.invoice_number, txReferenceId, expiryDays, invoice.contact_email, invoice.contact_phone)
-        console.log("%%%", paymentLinkInfo)
+        // console.log("%%%", paymentLinkInfo)
         const expirationDate = new Date();
         expirationDate.setDate(expirationDate.getDate() + expiryDays);
         await db('payments').where({ id: payment.id }).update({ amount: paymentAmount, link: paymentLinkInfo.link, status: 'pending', link_expires_at: expirationDate, transactionReferenceId:txReferenceId });
@@ -229,12 +232,12 @@ class PaymentService {
 
       }
       } else {
-        console.log(" payment exists,  not completed, link is not active... expired at is null")
+        // console.log(" payment exists,  not completed, link is not active... expired at is null")
         // const txReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
         const txReferenceId = `IN${generateReferenceId()}`
       
         const paymentLinkInfo = await this.getPaymentLink(paymentAmount, invoiceId, invoice.invoice_number, payment.transactionReferenceId, expiryDays, invoice.contact_email, invoice.contact_phone)
-        console.log("%%%", paymentLinkInfo)
+        // console.log("%%%", paymentLinkInfo)
         const expirationDate = new Date();
         expirationDate.setDate(expirationDate.getDate() + expiryDays);
         await db('payments').where({ id: payment.id }).update({ amount: paymentAmount, link: paymentLinkInfo.link, status: 'pending', link_expires_at: expirationDate });
@@ -247,11 +250,11 @@ class PaymentService {
       // const transactionReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
       // const transactionNewReferenceId = `IN${invoiceId}--${Date.now().toString(36)}`
       const transactionNewReferenceId = `IN${generateReferenceId()}`
-      console.log("%%%%%%%%%%%%%%%%",transactionNewReferenceId)
+      // console.log("%%%%%%%%%%%%%%%%",transactionNewReferenceId)
       const reference = this.generatePaymentReference();
       const method = 'ipospays'
       const paymentLinkInfo = await this.getPaymentLink(paymentAmount, invoiceId, invoice.invoice_number, transactionNewReferenceId, expiryDays, invoice.contact_email, invoice.contact_phone)
-      console.log("%%%1", paymentLinkInfo)
+      // console.log("%%%1", paymentLinkInfo)
       const expirationDate = new Date();
       expirationDate.setDate(expirationDate.getDate() + expiryDays);
       const [payment] = await db('payments').insert({
@@ -267,7 +270,7 @@ class PaymentService {
         recorded_by: userId || null
 
       }).returning('*');
-      console.log(payment)
+      // console.log(payment)
       return ({ payment_url: paymentLinkInfo.link });
     }
     
@@ -339,7 +342,7 @@ class PaymentService {
 
     try {
       const response = await axios.post(`${BASE_URL}`, body, config);
-      console.log("$$$$$$$$", response.data.information, response.data)
+      // console.log("$$$$$$$$", response.data.information, response.data)
 
       if (response.data.information) {
 
@@ -356,10 +359,10 @@ class PaymentService {
     }
   }
   async reconcilePaymentStatus(transactionReferenceId, responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode, reqBody ) {
-    console.log("PayquerySData%%%0", responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode,reqBody)
+    // console.log("PayquerySData%%%0", responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode,reqBody)
 
     const payment = await db('payments').where({ transactionReferenceId }).whereNotIn('status', ['completed']).first();
-    console.log("payment%%%1", payment)
+    // console.log("payment%%%1", payment)
     if (!payment) {
       // we still need to do an audit log of this attempt in the db so create a new payment
       //   const statusData = await axios.get(`${QUERY_URL}`, {
@@ -379,7 +382,7 @@ class PaymentService {
       // const querySuccess = statusData.data.status
       // console.log("querySuccess%%%1", querySuccess)
       // const { responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode } = statusData.data.data;
-      console.log("querySData%%%1", responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode)
+      // console.log("querySData%%%1", responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode)
       // const status = statusData.status
       const reference = this.generatePaymentReference();
       const method = 'ipospays'
@@ -433,7 +436,7 @@ class PaymentService {
       // const querySuccess = statusData.data.status
       // const { responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode } = statusData.data.data;
       // const status = statusData.status
-      console.log("PayquerySData%%%1", responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode,reqBody)
+      // console.log("PayquerySData%%%1", responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode,reqBody)
 
       // 2. Map POS status to your DB status
       let newStatus = 'pending';
@@ -572,9 +575,9 @@ class PaymentService {
 
   }
   async notifyClientOfPaymentFailure(invoiceId, amountPaid, responseCode, errResponseMessage) {
-    console.log("PayquerySData%%%7")
+    // console.log("PayquerySData%%%7")
     const inv = await db('invoices').where({ id: invoiceId }).first();
-    console.log("PayquerySData%%%8")
+    // console.log("PayquerySData%%%8")
     if (inv) {
 
       let clientContactEmail = null;

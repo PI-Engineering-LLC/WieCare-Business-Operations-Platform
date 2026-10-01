@@ -14,7 +14,8 @@ const notificationService = require('../services/notifications.service');
 const {getIO} = require('../config/socket')
 const {formatToStrict13}= require('../utils/phone')
 const validateWebhook = require('../middleware/webhook');
-const PaymentService = require('../services/payments')
+const PaymentService = require('../services/payments');
+const { updateClientHold } = require('../middleware/holdCheck');
 const BASE_URL = process.env.IPOSPAYS_SANDBOX === 'true'
   ? process.env.IPOSPAYS_SANDBOX_API_URL
   : process.env.IPOSPAYS_API_URL
@@ -58,7 +59,7 @@ const POS_QUERY_CONFIG = {
 router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
   auditMiddleware({action: 'payment.processed', resourceType:'payment'}),
   asyncHandler( async (req, res) => {
-    console.log("^^^^^^^^^",req.params,req.params.secret, req.body.transactionReferenceId, req.body.responseCode, req.body.responseMessage, req.body.amount, req.body.responseApprovalCode, req.body.errResponseMessage)
+    // console.log("^^^^^^^^^",req.params,req.params.secret, req.body.transactionReferenceId, req.body.responseCode, req.body.responseMessage, req.body.amount, req.body.responseApprovalCode, req.body.errResponseMessage)
       // iPOSpays sends response fields in the body
       const { transactionReferenceId, responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode } = req.body;
 
@@ -73,7 +74,7 @@ router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
         console.log("PayquerySData%%%0", responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode,req.body)
 
     const payment = await db('payments').where({ transactionReferenceId }).whereNotIn('status', ['completed']).first();
-    console.log("payment%%%1", payment)
+    // console.log("payment%%%1", payment)
     if (!payment) {
       // we still need to do an audit log of this attempt in the db so create a new payment
       //   const statusData = await axios.get(`${QUERY_URL}`, {
@@ -93,7 +94,7 @@ router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
       // const querySuccess = statusData.data.status
       // console.log("querySuccess%%%1", querySuccess)
       // const { responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode } = statusData.data.data;
-      console.log("querySData%%%1", responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode)
+      // console.log("querySData%%%1", responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode)
       // const status = statusData.status
       const reference = PaymentService.generatePaymentReference();
       const method = 'ipospays'
@@ -121,32 +122,8 @@ router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
     } else {
       //Prevent double counting
       if (payment.status === 'completed') return 'completed';
-      // const config = {
-      //   headers: {
-      //       // This is the Auth Token you generated in the portal
-      //       'Authorization': AUTH_TOKEN, 
-      //       'Content-Type': 'application/json'
-      //   }
-      // }
-      // 1. Fetch live status from POS
-      // const statusData = await axios.get(`${QUERY_URL}`, {
-      //     params: { tpn: TPN, transactionReferenceId: transactionReferenceId }
-      // }, POS_QUERY_CONFIG);
-      // const statusData = await axios.get(QUERY_URL, {
-      //   headers: {
-      //     'Authorization': AUTH_TOKEN,
-      //     'Content-Type': 'application/json'
-      //   },
-      //   params: {
-      //     tpn: TPN,
-      //     transactionReferenceId: transactionReferenceId
-      //   }
-      // });
-
-      // const querySuccess = statusData.data.status
-      // const { responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode } = statusData.data.data;
-      // const status = statusData.status
-      console.log("PayquerySData%%%1", responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode,req.body)
+      
+      // console.log("PayquerySData%%%1", responseCode, responseMessage, amount, errResponseCode, errResponseMessage, responseApprovalCode,req.body)
 
       // 2. Map POS status to your DB status
       let newStatus = 'pending';
@@ -156,13 +133,13 @@ router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
       const invoiceId = payment.invoice_id
       const amountPaid = parseFloat(amount) / 100;
       if (newStatus === 'failed') {
-        console.log("PayquerySData%%%2")
+        // console.log("PayquerySData%%%2")
         await db('payments')
           .where({ id: payment.id, transactionReferenceId })
           .update({ amount: amountPaid, status: newStatus, raw_response: JSON.stringify(req.body) });
-          console.log("PayquerySData%%%3")
+          // console.log("PayquerySData%%%3")
         await PaymentService.notifyClientOfPaymentFailure(invoiceId, amountPaid, responseCode, errResponseMessage)
-        console.log("PayquerySData%%%4")
+        // console.log("PayquerySData%%%4")
          return res.status(200).send('OK');;
       }
       // 3. Update DB within transaction - can change txrefid to paymentid since payment includes invoice
@@ -178,15 +155,6 @@ router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
           if (inv) {
             const newPaid = parseFloat(amountPaid || 0);
             const newBalance = parseFloat(inv.total_amount) - newPaid;
-            // const paymentHistory = [...(inv.payment_history || []), {
-            //   date: new Date().toISOString().split('T')[0],
-            //   amountPaid: parseFloat(amountPaid),
-            //   method,
-            //   transactionReferenceId,
-            //   reference,
-            //   invoice_id: invoiceId,
-            //   status: newStatus
-            // }];
             
             const newInvoiceStatus = newBalance <= 0 ? 'paid' : newPaid > 0 ? 'partial' : inv.status;
 
@@ -201,7 +169,7 @@ router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
             await trx('payments')
               .where({ id: payment.id, transactionReferenceId })
               .update({ amount: amountPaid, paid_at: new Date().toISOString().split('T')[0], status: newStatus, raw_response: JSON.stringify(req.body) });
-
+            
             //Send notification and email
             let clientContactEmail = null;
             let is_email_sent = false;
@@ -215,7 +183,7 @@ router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
                 console.warn(`Client with ID ${client_id} not found for email notification.`);
               }
             }
-
+            
             const notifications = await notificationService.notifyClientUsersWithEmail({
               clientId: client_id,
               email: clientContactEmail, // Pass the contact email for the service to use
@@ -228,16 +196,19 @@ router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
               resourceId: inv.id,
               resourceType: "invoice"
             });
-            // await notificationService.notifyAllAdmins({ title: 'Payment Received', message: `Payment of $${amountPaid.toFixed(2)} received for invoice #${inv.invoice_number}`, type: 'success', category: 'invoice', link: `/AdminInvoices?invoice_id=${inv.id}` });
-                  
-            const io = getIO();
-      if (io) {
-        io.to('admins').emit('notification:new', { category:'invoice'})
-        // io.to('admins').emit('notification:new', { title: 'Payment Received', message: `Payment of $${amountPaid.toFixed(2)} received for invoice #${inv.invoice_number}`, type: 'success', category: 'invoice', link: `/AdminInvoices?invoice_id=${inv.id}` });
-      }
+            
+            
           }
         }
       });
+      if (newStatus === 'completed') {
+        updateClientHold(payment.client_id)
+        const io = getIO();
+      if (io) {
+        io.to('admins').emit('notification:new', { category:'client'})
+      }
+      }
+      
 
        return res.status(200).send('OK');;
     }
@@ -266,7 +237,6 @@ router.post(`/webhook/ipospays/secret=${process.env.WEBHOOK_SECRET}`,
 router.post('/ipospays/createPaymentSession', requireAuth,loadContext,resolveClientContext,
   auditMiddleware({action: 'payment.created', resourceType:'payment'}),
   asyncHandler( async (req, res) => {
-  
     const { invoiceId } = req.body;
   
 try {
@@ -314,11 +284,11 @@ router.post('/recordPayment', requireAuth,loadContext, adminOnly,
   const newTotalPaid = parseFloat(invoice.amount_paid || 0) + parseFloat(amount);
   const balanceDue = parseFloat(invoice.total_amount || 0) - newTotalPaid;
   const newStatus = balanceDue <= 0 ? 'paid' : newTotalPaid > 0 ? 'partial' : selectedInvoice.status;
-  console.log("newTotalPaid",newTotalPaid,balanceDue, amount, newStatus)
+  // console.log("newTotalPaid",newTotalPaid,balanceDue, amount, newStatus)
   const [updatedInvoice] =await db('invoices')
   .where({ id: invoice.id })
   .update({ amount_paid: newTotalPaid, balance_due: balanceDue, status: newStatus,  created_by: req.user.id, payment_history: JSON.stringify(paymentHistory ?? [])}).returning('*');
-
+  if(invoice.client_id) await updateClientHold(invoice.client_id);
   // Mark invoice paid if amount covers total
   // if (parseFloat(amount) >= parseFloat(invoice.total_due)) {
   //   await db('invoices')
@@ -407,6 +377,7 @@ router.post('/:id/refund', requireAuth,loadContext, adminOnly,
     .where({ id: payment.invoice_id, status: 'paid' })
     .update({ status: 'sent'});
     // .update({ status: 'sent', paid_at: null, updated_at: new Date() });
+    if(payment.client_id) await updateClientHold(payment.client_id);
     const io = getIO();
     if (io) {
         io.emit('notification:new', { category:'invoice'})

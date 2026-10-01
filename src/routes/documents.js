@@ -101,7 +101,6 @@ router.post('/', requireAuth, loadContext,
   asyncHandler(async (req, res) => {
     const client_id = req.body.client_id === "" ? null : req.body.client_id
     let client; 
-    console.log("###########", client_id )
     if(client_id){
       client = await db('clients').where({ id: client_id, status: 'active' }).first();
     }

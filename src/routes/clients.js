@@ -8,6 +8,7 @@ const auditMiddleware = require('../middleware/auditMiddleware');
 const requireRoles = require('../middleware/roles');
 const resolveClientContext = require('../middleware/resolveClientContext');
 const { getIO } = require('../config/socket');
+const {updateClientHold} = require('../middleware/holdCheck');
 // GET /api/clients
 router.get('/', requireAuth, loadContext, adminOnly, // Assuming only internal admins can list all clients
   asyncHandler(async (req, res) => {
@@ -30,6 +31,8 @@ router.get('/', requireAuth, loadContext, adminOnly, // Assuming only internal a
 // GET /api/clients/:id - Get single client details (more granular access)
 router.get('/:id', requireAuth, loadContext, resolveClientContext, // Example: client_admin can view their client
   asyncHandler(async (req, res) => {
+    // updateClientHold(req.params.id)
+
     const client = await db('clients').where({ id: req.params.id }).first();
     if (!client) return res.status(404).json({ error: 'Client not found' });
 
@@ -37,7 +40,7 @@ router.get('/:id', requireAuth, loadContext, resolveClientContext, // Example: c
     if (req.user && !req.user.isInternalAdmin && req.membership && req.membership.clientId !== client.id) {
       return res.status(403).json({ error: 'Forbidden: You can only access your own client data.' });
     }
-
+    
     res.json(client);
   }));
 
