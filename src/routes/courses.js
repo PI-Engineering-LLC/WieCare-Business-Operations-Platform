@@ -108,7 +108,20 @@ router.delete('/:id', requireAuth, loadContext, adminOnly,
   auditMiddleware({ action: 'course.deleted', resourceType: 'course' }),
   asyncHandler(async (req, res) => {
     const currentCourse = await db('courses').where({ id: req.params.id }).first();
-    await deleteFile(currentCourse.thumbnail_storage_key);
+    if (currentCourse.video_storage_key) {
+      try {
+        await deleteFile(currentCourse.video_storage_key, true); //All videos are private on r2, avatars are public
+      } catch (err) {
+        console.error("Failed to delete old file from R2", err);
+      }
+    }
+    if (currentCourse.thumbnail_storage_key) {
+      try {
+        await deleteFile(currentCourse.thumbnail_storage_key); //All videos are private on r2, avatars are public
+      } catch (err) {
+        console.error("Failed to delete old file from R2", err);
+      }
+    }
     await db('courses').where({ id: req.params.id }).delete();
     const io = getIO();
   if (io) {
