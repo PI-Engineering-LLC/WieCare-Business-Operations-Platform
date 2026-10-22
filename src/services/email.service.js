@@ -117,6 +117,7 @@ class EmailService {
   <div style="background:#f8fafc;padding:24px 32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0">
   <p>Dear ${client.contact_name || "Customer"},</p>
     <p>Your maintenance request has been updated.</p>
+    <p>${maintenance.admin_notes ? `<p><strong>Admin Notes:</strong> ${maintenance.admin_notes}</p>` : ''}</p>
     <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">
       <tr><td style="padding:6px 12px;font-weight:bold;border-bottom:1px solid #e2e8f0">New Status</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${maintenance.status}</td></tr>
       ${formattedDate ? `<tr><td style="padding:6px 12px;font-weight:bold;border-bottom:1px solid #e2e8f0">Scheduled Date</td><td style="padding:6px 12px;border-bottom:1px solid #e2e8f0">${formattedDate}</td></tr>` : ''}
